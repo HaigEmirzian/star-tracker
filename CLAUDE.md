@@ -1,0 +1,84 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this is
+
+A live tracker for SpaceX's space infrastructure: the **Starlink** broadband
+constellation and **Starmind**, SpaceX's orbital AI data center program (built
+with Nvidia). Single-page app with a Starmind/Starlink tab toggle over an
+animated starfield background — no routing, no database.
+
+## Commands
+
+```bash
+npm run dev      # start dev server (Turbopack) at localhost:3000
+npm run build    # production build
+npm run start    # serve the production build
+npm run lint     # eslint
+npx tsc --noEmit # type-check only
+```
+
+There is no test suite in this repo.
+
+## Architecture
+
+**No database, ever (by design).** All data is fetched server-side and
+cached via Next.js's Data Cache (`fetch`'s `next.revalidate`, or
+`unstable_cache` where a stale-fallback is needed). This is what keeps the
+site deployable for free on Vercel's Hobby tier with zero backing services.
+Do not introduce a database or KV store to solve a caching problem — solve it
+with Next.js's built-in cache semantics instead (see `lib/data/celestrak.ts`
+for the pattern: wrap the raw fetch in `unstable_cache`, throw on failure
+rather than returning null/empty, and Next.js will keep serving the last
+successful result instead of the page going blank).
+
+**Data flow:** `app/page.tsx` is a Server Component that fetches everything
+(`lib/data/*`) in parallel, then hands it as props into
+`components/TabSwitcher.tsx` — a Client Component that owns which tab is
+active. Because `TabSwitcher` imports `StarlinkPanel`/`StarmindPanel`/
+`StarlinkGrowthChart` directly (not via `children`), those are part of the
+client module graph too, even without their own `"use client"` directive.
+Anything in that tree that depends on wall-clock time (`Date.now()`) must
+compute it in a `useEffect` after mount, not during render — render also runs
+during SSR, and baking "now" into the server-rendered HTML causes a hydration
+mismatch against the client's actual time (see the `useNow()` hook in
+`StarlinkPanel.tsx`).
+
+**Data sources** (`lib/data/`):
+- `celestrak.ts` — live satellite orbital data from CelesTrak. **Rate
+  limited to updates every ~2 hours per dataset** — repeated requests return
+  a 403 with a plain-text body instead of JSON. Also derives the "active
+  satellites by launch year" growth chart from each satellite's `OBJECT_ID`
+  (international launch designator, e.g. `2019-074B` → launched 2019) rather
+  than persisting our own historical snapshots.
+- `launchLibrary.ts` — live launch history/manifest from Launch Library 2
+  (TheSpaceDevs). Parses satellite-per-launch counts out of free-text mission
+  descriptions (`"A batch of 24 satellites..."`); falls back to a labeled
+  estimate (`satelliteCountIsEstimate: true`) when the text doesn't state a
+  number. Never invent a number without that flag.
+- `fccStatic.ts`, `starmindStatic.ts` — manually maintained public facts with
+  no reliable free live API (FCC authorization ceilings, SpaceX's stated
+  network capacity, the Starmind/Nvidia partnership timeline). Each has a
+  `lastUpdated` field. **Never add invented/estimated numbers to these
+  files** — only publicly confirmed figures, updated by hand as new filings
+  or announcements land. This is especially strict for `starmindStatic.ts`:
+  Starmind has no live telemetry yet, so the UI intentionally renders its
+  metrics grid as locked/pending (`StarmindPanel.tsx`) rather than showing a
+  number.
+
+**Styling:** Tailwind CSS v4, dark-only (space theme — black background,
+white text), no light-mode variant. `components/Starfield.tsx` is a
+`<canvas>`-based ambient star twinkle behind all content — no mouse/scroll
+parallax (removed intentionally; keep it that way unless asked to re-add).
+
+**Charts:** Recharts. `StarlinkGrowthChart.tsx` follows a validated
+single-hue-sequential color (`#3987e5`, checked against this project's black
+background via the dataviz skill's palette validator) — if adding another
+chart, load the `dataviz` skill first rather than picking colors ad hoc.
+
+**Accessibility:** The tab toggle (`TabSwitcher.tsx`) implements the ARIA
+"tablist" pattern with roving `tabindex` (only the active tab is a Tab stop;
+arrow keys move between tabs) plus a global `ArrowLeft`/`ArrowRight`
+shortcut that works from anywhere on the page. Do not disable the `Tab` key
+itself — that breaks keyboard access to the rest of the page.
