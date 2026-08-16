@@ -4,12 +4,20 @@ import path from "path";
 const STARLINK_GP_URL =
   "https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=json";
 
-// CelesTrak throttles repeat requests per-dataset (returns a plain-text
-// "GP data has not updated..." message instead of JSON) if hit too often.
-// This is also roughly how often the underlying data actually changes, so
-// there's never a reason to attempt a fetch more often than this — see the
-// disk-cache guard below, which enforces that independent of Next's own
-// cache (which resets on every local `next dev` restart).
+// CelesTrak throttles repeat requests per-dataset (returns a 403 with a
+// plain-text "GP data has not updated since your last successful download of
+// GROUP=starlink at <timestamp>. Data is updated once every 2 hours."
+// message instead of JSON) if hit too often. Confirmed directly against the
+// live endpoint: the throttle window is exactly 2 hours, measured from each
+// IP's last *successful* download of this dataset, and applies regardless of
+// response format (JSON/CSV) — it's a limit on the GROUP=starlink dataset
+// itself, not per-request-shape. This is also roughly how often the
+// underlying data actually changes, so there's never a reason to attempt a
+// fetch more often than this — see the disk-cache guard below, which
+// enforces that independent of Next's own cache (which resets on every local
+// `next dev` restart). Our guard's window starts from any attempt (success
+// or failure), which is at least as conservative as CelesTrak's own
+// success-based window, so it never risks tripping the real limit.
 const REVALIDATE_SECONDS = 60 * 60 * 2;
 
 // Matches CelesTrak's OMM/JSON GP format, which is also exactly the shape
@@ -156,6 +164,8 @@ async function fetchFromCelesTrak(): Promise<StarlinkData> {
 // reliably writable/persistent across invocations, so every fs call below is
 // wrapped to fail silently and fall through to a live fetch. The in-memory
 // cache below still coalesces requests within a warm instance either way.
+// See FALLBACK_SNAPSHOT_FILE below for what covers the gap this leaves in
+// production (and on a fresh clone/checkout with no `.cache/` yet).
 const DISK_CACHE_FILE = path.join(process.cwd(), ".cache", "starlink-data.json");
 
 interface DiskCacheEntry {
@@ -184,15 +194,65 @@ async function writeDiskCache(entry: DiskCacheEntry): Promise<void> {
   }
 }
 
+// --- Committed fallback snapshot --------------------------------------------
+//
+// The disk cache above is gitignored and only ever as good as the local/
+// deployed filesystem: a fresh clone, a fresh Vercel deployment (where writes
+// are best-effort anyway), or a wiped `.cache/` directory all start with
+// nothing in it. Previously that meant `getStarlinkData()` returned null in
+// those cases and the UI showed "unavailable" placeholders even though we'd
+// successfully fetched real data before — a stale-but-real snapshot is
+// always a better default than none.
+//
+// This file is checked into git specifically so every deploy/checkout ships
+// with a real last-known-good snapshot out of the box. It's updated in place
+// (see the write in fetchStarlinkDataDiskGuarded below) every time a live
+// fetch actually succeeds, so committing it as part of normal development —
+// whenever it's touched by a successful local `npm run dev` fetch — is what
+// keeps it fresh. There's no automated write to it in production (same
+// read-only-filesystem caveat as the disk cache), so it'll gradually go
+// stale between manual refreshes; that's still strictly better than a blank
+// panel, and the UI already labels data with its `fetchedAt` date.
+const FALLBACK_SNAPSHOT_FILE = path.join(
+  process.cwd(),
+  "lib",
+  "data",
+  "starlink-fallback-snapshot.json",
+);
+
+let fallbackSnapshotCache: StarlinkData | null | undefined;
+
+async function readFallbackSnapshot(): Promise<StarlinkData | null> {
+  if (fallbackSnapshotCache !== undefined) return fallbackSnapshotCache;
+  try {
+    const raw = await fs.readFile(FALLBACK_SNAPSHOT_FILE, "utf-8");
+    fallbackSnapshotCache = JSON.parse(raw) as StarlinkData;
+  } catch {
+    fallbackSnapshotCache = null;
+  }
+  return fallbackSnapshotCache;
+}
+
+async function writeFallbackSnapshot(data: StarlinkData): Promise<void> {
+  fallbackSnapshotCache = data;
+  try {
+    await fs.writeFile(FALLBACK_SNAPSHOT_FILE, JSON.stringify(data, null, 2), "utf-8");
+  } catch {
+    // Read-only/ephemeral filesystem (production) — fine, see comment above.
+  }
+}
+
 async function fetchStarlinkDataDiskGuarded(): Promise<StarlinkData> {
   const cached = await readDiskCache();
   const now = Date.now();
 
   if (cached && now - cached.lastAttemptAt < REVALIDATE_SECONDS * 1000) {
     // Too soon since the last attempt — don't risk another rate-limit hit.
-    // Serve the last known-good snapshot if we have one; otherwise there's
-    // nothing to fall back to yet, but we still skip the network call.
+    // Serve the last known-good snapshot if we have one; otherwise fall back
+    // to the committed snapshot rather than showing nothing.
     if (cached.data) return cached.data;
+    const fallback = await readFallbackSnapshot();
+    if (fallback) return fallback;
     throw new Error(
       "Skipping fetch: a recent attempt already failed and the guard window hasn't elapsed",
     );
@@ -201,6 +261,7 @@ async function fetchStarlinkDataDiskGuarded(): Promise<StarlinkData> {
   try {
     const fresh = await fetchFromCelesTrak();
     await writeDiskCache({ data: fresh, lastAttemptAt: now });
+    await writeFallbackSnapshot(fresh);
     return fresh;
   } catch (err) {
     // Always record the attempt, even with no prior data to fall back on —
@@ -208,6 +269,8 @@ async function fetchStarlinkDataDiskGuarded(): Promise<StarlinkData> {
     // CelesTrak while we've never yet had a successful fetch.
     await writeDiskCache({ data: cached?.data, lastAttemptAt: now });
     if (cached?.data) return cached.data;
+    const fallback = await readFallbackSnapshot();
+    if (fallback) return fallback;
     throw err;
   }
 }
