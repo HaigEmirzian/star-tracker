@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# local dev disk cache for external API fallbacks (see lib/data/celestrak.ts)
+/.cache/
+
 # production
 /build
 

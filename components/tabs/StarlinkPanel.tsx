@@ -1,11 +1,24 @@
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { fccStarlinkAuthorization, starlinkNetwork, firstLaunchDate } from "@/lib/data/fccStatic";
-import type { StarlinkSummary } from "@/lib/data/celestrak";
+import type { StarlinkSummary, StarlinkGpEntry } from "@/lib/data/celestrak";
 import type { LaunchSummary } from "@/lib/data/launchLibrary";
 import StarlinkGrowthChart from "@/components/tabs/StarlinkGrowthChart";
 
+// globe.gl/three touch window/document and are a heavy dependency (~600KB) —
+// load only client-side, only once this panel actually renders.
+const StarlinkGlobe = dynamic(() => import("@/components/tabs/StarlinkGlobe"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-[420px] items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-sm text-white/40">
+      Loading live constellation view…
+    </div>
+  ),
+});
+
 export interface StarlinkPanelProps {
   summary: StarlinkSummary | null;
+  entries: StarlinkGpEntry[];
   upcomingLaunches: LaunchSummary[];
   recentLaunches: LaunchSummary[];
 }
@@ -79,6 +92,7 @@ function LaunchListItem({ launch }: { launch: LaunchSummary }) {
 
 export default function StarlinkPanel({
   summary,
+  entries,
   upcomingLaunches,
   recentLaunches,
 }: StarlinkPanelProps) {
@@ -101,6 +115,15 @@ export default function StarlinkPanel({
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-8">
+      {entries.length > 0 ? (
+        <StarlinkGlobe entries={entries} />
+      ) : (
+        <div className="flex h-[420px] items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-center text-sm text-white/40">
+          Live constellation view unavailable — CelesTrak updates roughly
+          every 2 hours. This will populate once a fetch succeeds.
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           label="Active satellites"
