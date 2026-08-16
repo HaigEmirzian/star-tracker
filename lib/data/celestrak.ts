@@ -1,4 +1,3 @@
-import { unstable_cache } from "next/cache";
 import { promises as fs } from "fs";
 import path from "path";
 
@@ -143,21 +142,20 @@ async function fetchFromCelesTrak(): Promise<StarlinkData> {
 
 // --- Disk-backed guard -----------------------------------------------------
 //
-// Next's `unstable_cache` (below) is the real persistence layer in
-// production — Vercel's Data Cache survives across requests and
-// deployments. Locally, though, `next dev` clears that cache on every
-// restart, so repeated restarts during development were re-hitting
-// CelesTrak's live endpoint far more than its ~2-hour update cadence and
-// tripping its rate limit. This file-based layer fixes both problems for
-// local dev: it persists the last successful snapshot across restarts, and
-// it refuses to even attempt a network call more often than
-// REVALIDATE_SECONDS regardless of Next's cache state.
+// This is the sole persistence/throttling layer for CelesTrak requests (see
+// the in-memory coalescing comment further below for why it's no longer
+// paired with `unstable_cache` — the payload outgrew Next's Data Cache
+// 2MB-per-entry limit). Locally, `next dev` has no other persistence, so
+// without this, repeated dev-server restarts would re-hit CelesTrak's live
+// endpoint far more than its ~2-hour update cadence and trip its rate
+// limit. This file-based layer persists the last successful snapshot across
+// restarts, and refuses to even attempt a network call more often than
+// REVALIDATE_SECONDS regardless of process state.
 //
-// In production this is inert by design — Vercel's serverless filesystem
-// isn't reliably writable/persistent across invocations, so every fs call
-// below is wrapped to fail silently and fall through to a live fetch,
-// leaving `unstable_cache` as the sole (and already correct) persistence
-// mechanism there.
+// In production this is best-effort — Vercel's serverless filesystem isn't
+// reliably writable/persistent across invocations, so every fs call below is
+// wrapped to fail silently and fall through to a live fetch. The in-memory
+// cache below still coalesces requests within a warm instance either way.
 const DISK_CACHE_FILE = path.join(process.cwd(), ".cache", "starlink-data.json");
 
 interface DiskCacheEntry {
@@ -186,7 +184,7 @@ async function writeDiskCache(entry: DiskCacheEntry): Promise<void> {
   }
 }
 
-async function fetchStarlinkDataGuarded(): Promise<StarlinkData> {
+async function fetchStarlinkDataDiskGuarded(): Promise<StarlinkData> {
   const cached = await readDiskCache();
   const now = Date.now();
 
@@ -200,9 +198,6 @@ async function fetchStarlinkDataGuarded(): Promise<StarlinkData> {
     );
   }
 
-  // unstable_cache already coalesces concurrent calls for the same key
-  // within a process, so no separate "reserve before fetching" step is
-  // needed here — just fetch, and always write a complete, valid entry.
   try {
     const fresh = await fetchFromCelesTrak();
     await writeDiskCache({ data: fresh, lastAttemptAt: now });
@@ -217,15 +212,48 @@ async function fetchStarlinkDataGuarded(): Promise<StarlinkData> {
   }
 }
 
-const getCachedStarlinkData = unstable_cache(
-  fetchStarlinkDataGuarded,
-  ["starlink-data"],
-  { revalidate: REVALIDATE_SECONDS },
-);
+// --- In-memory request coalescing ------------------------------------------
+//
+// This used to also be wrapped in `unstable_cache` to persist across
+// deploys/invocations via Next's Data Cache. That broke once the
+// constellation grew past ~7,000 satellites: the raw entries payload now
+// runs 5MB+, and Next's Data Cache hard-caps every entry at 2MB (enforced in
+// next/dist/server/lib/incremental-cache regardless of which caching API you
+// use — unstable_cache, fetch's `next.revalidate`, all the same limit)
+// unless a custom cache handler is installed. In dev that throws and crashes
+// the request; in prod it would silently stop caching and start re-hitting
+// CelesTrak on every request, tripping its throttle almost immediately.
+//
+// The disk-cache guard above already does the real work — unbounded size,
+// persists across dev restarts, and enforces the ~2-hour throttle window
+// independent of any Next.js cache. This in-memory promise just coalesces
+// concurrent/rapid calls within a single warm process so we're not hitting
+// the filesystem (or CelesTrak) on every request. It doesn't survive cold
+// starts on serverless, but neither did the disk cache in production (see
+// its comment above) — this is a strict improvement with no worse a
+// production ceiling than before, and it doesn't crash.
+let inMemoryCache: { promise: Promise<StarlinkData>; expiresAt: number } | null = null;
+
+function fetchStarlinkDataGuarded(): Promise<StarlinkData> {
+  const now = Date.now();
+  if (inMemoryCache && now < inMemoryCache.expiresAt) {
+    return inMemoryCache.promise;
+  }
+
+  const promise = fetchStarlinkDataDiskGuarded();
+  inMemoryCache = { promise, expiresAt: now + REVALIDATE_SECONDS * 1000 };
+  // Don't hold onto a rejected promise as the "cached" value — let the next
+  // call retry (the disk-cache guard's own lastAttemptAt window still
+  // protects CelesTrak from being hit too often across that retry).
+  promise.catch(() => {
+    if (inMemoryCache?.promise === promise) inMemoryCache = null;
+  });
+  return promise;
+}
 
 export async function getStarlinkData(): Promise<StarlinkData | null> {
   try {
-    return await getCachedStarlinkData();
+    return await fetchStarlinkDataGuarded();
   } catch {
     // No successful fetch has ever completed yet (e.g. moments after a
     // fresh deploy, with no disk cache either) — nothing to fall back to.
