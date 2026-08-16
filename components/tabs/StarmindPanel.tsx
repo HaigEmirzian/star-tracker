@@ -1,4 +1,5 @@
 import { starmind } from "@/lib/data/starmindStatic";
+import CapabilityTranslator from "@/components/tabs/CapabilityTranslator";
 
 function LockedStat({ label }: { label: string }) {
   return (
@@ -88,6 +89,10 @@ export default function StarmindPanel() {
             </div>
           </dl>
         </div>
+      </div>
+
+      <div className="w-full">
+        <CapabilityTranslator />
       </div>
 
       <p className="text-xs text-white/30">
