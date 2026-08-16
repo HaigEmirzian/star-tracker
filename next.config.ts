@@ -16,6 +16,18 @@ const WASM_IMPORT_SPECIFIER = /^#wasm-(single|multi)-thread$/;
 const NODE_BUILTIN_STUB = "./lib/empty-module.ts";
 
 const nextConfig: NextConfig = {
+  images: {
+    // Scoped narrowly to the exact hostname actually hotlinked from
+    // lib/data/gpuSpecs.ts (the Nvidia B200 product image) — don't widen
+    // this without a corresponding new hotlinked image.
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "www.nvidia.com",
+        pathname: "/content/dam/**",
+      },
+    ],
+  },
   turbopack: {
     resolveAlias: {
       "node:module": NODE_BUILTIN_STUB,
