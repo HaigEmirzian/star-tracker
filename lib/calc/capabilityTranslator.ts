@@ -1,0 +1,177 @@
+// Pure math for the Capability Translator (Starmind tab). No React/JSX here
+// on purpose — keeping the arithmetic isolated from the component makes it
+// reviewable (and eventually testable) independent of rendering concerns.
+import type { comparisonFactors } from "@/lib/data/comparisonFactors";
+
+/** Precision buckets the translator supports. */
+export type Precision = "fp16" | "fp8" | "fp4";
+
+/**
+ * Shape of a GPU's specs as consumed by this calculator. Deliberately does
+ * NOT import from `lib/data/gpuSpecs.ts` — that file is being built in
+ * parallel on `feature/gpu-spec-comparison` and doesn't exist on this
+ * branch. `tdpWatts` and each `flops.*` entry are optional because not
+ * every GPU publishes every figure (e.g. FP4 Tensor Core throughput only
+ * exists on newer architectures) — callers must never fabricate a 0 for a
+ * missing value.
+ */
+export interface GpuLike {
+  id: string;
+  name: string;
+  tdpWatts?: number;
+  /** Peak Tensor Core throughput in raw FLOPS (not TFLOPS) per precision. */
+  flops: Partial<Record<Precision, number>>;
+}
+
+export interface ComputeTotalsInput {
+  tdpWatts?: number;
+  flopsByPrecision: Partial<Record<Precision, number>>;
+  quantity: number;
+}
+
+export interface ComputeTotalsResult {
+  totalPowerW: number | null;
+  totalFlopsByPrecision: Partial<Record<Precision, number>>;
+}
+
+/** Scales a single GPU's specs linearly by quantity. */
+export function computeTotals({
+  tdpWatts,
+  flopsByPrecision,
+  quantity,
+}: ComputeTotalsInput): ComputeTotalsResult {
+  const totalPowerW = tdpWatts !== undefined ? tdpWatts * quantity : null;
+  const totalFlopsByPrecision: Partial<Record<Precision, number>> = {};
+  for (const [precision, flops] of Object.entries(flopsByPrecision) as [
+    Precision,
+    number | undefined,
+  ][]) {
+    if (flops !== undefined) totalFlopsByPrecision[precision] = flops * quantity;
+  }
+  return { totalPowerW, totalFlopsByPrecision };
+}
+
+/** Auto-scales watts to the largest sensible unit (W / kW / MW / GW). */
+export function formatPower(watts: number): string {
+  const abs = Math.abs(watts);
+  if (abs < 1_000) return `${watts.toLocaleString(undefined, { maximumFractionDigits: 0 })} W`;
+  if (abs < 1_000_000)
+    return `${(watts / 1_000).toLocaleString(undefined, { maximumFractionDigits: 2 })} kW`;
+  if (abs < 1_000_000_000)
+    return `${(watts / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 })} MW`;
+  return `${(watts / 1_000_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 })} GW`;
+}
+
+/** Auto-scales a raw FLOPS figure to the largest sensible unit. */
+export function formatFlops(flops: number): string {
+  const units: [number, string][] = [
+    [1e18, "EFLOPS"],
+    [1e15, "PFLOPS"],
+    [1e12, "TFLOPS"],
+    [1e9, "GFLOPS"],
+  ];
+  for (const [threshold, label] of units) {
+    if (Math.abs(flops) >= threshold) {
+      return `${(flops / threshold).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${label}`;
+    }
+  }
+  return `${flops.toLocaleString(undefined, { maximumFractionDigits: 0 })} FLOPS`;
+}
+
+export interface RelatableComparison {
+  label: string;
+  count: number;
+}
+
+/**
+ * Pure conversion from a total power draw into relatable everyday units.
+ * Returns structured data only — the component decides how to round,
+ * pluralize, and format for display.
+ *
+ * `avgUsHomePowerDrawKw` and the plant-output factors are themselves
+ * continuous-power figures, so those two comparisons are a direct power/power
+ * ratio (no time assumption needed). The Tesla comparison is inherently
+ * energy-based (a full charge is a fixed number of kWh, not a power draw),
+ * so it assumes the input power is sustained for 24 hours to get a daily
+ * energy figure — that assumption lives here, not silently in the UI.
+ */
+export function relatableComparisons(
+  totalPowerW: number,
+  factors: typeof comparisonFactors,
+): RelatableComparison[] {
+  const totalPowerKw = totalPowerW / 1_000;
+  const dailyEnergyKwh = totalPowerKw * 24;
+
+  return [
+    {
+      label: "US homes (avg. continuous power draw)",
+      count: totalPowerKw / factors.avgUsHomePowerDrawKw.value,
+    },
+    {
+      label: "Tesla Model 3 full charges per day",
+      count: dailyEnergyKwh / factors.teslaModel3BatteryKwh.value,
+    },
+    {
+      label: "nuclear power plants (avg. output)",
+      count: totalPowerW / (factors.nuclearPlantOutputMw.value * 1_000_000),
+    },
+    {
+      label: "wind turbines (avg. nameplate capacity)",
+      count: totalPowerW / (factors.windTurbineOutputMw.value * 1_000_000),
+    },
+  ];
+}
+
+export interface ConstellationScaleInput {
+  gpusPerSatellite: number;
+  satelliteCount: number;
+  perGpu: {
+    tdpWatts?: number;
+    flopsByPrecision: Partial<Record<Precision, number>>;
+  };
+}
+
+/** Totals at hypothetical constellation scale: quantity = GPUs/satellite × satellite count. */
+export function constellationScale({
+  gpusPerSatellite,
+  satelliteCount,
+  perGpu,
+}: ConstellationScaleInput): ComputeTotalsResult {
+  return computeTotals({
+    tdpWatts: perGpu.tdpWatts,
+    flopsByPrecision: perGpu.flopsByPrecision,
+    quantity: gpusPerSatellite * satelliteCount,
+  });
+}
+
+// --- Log-scale slider mapping -------------------------------------------
+//
+// The quantity control spans 1 to 1,000,000 GPUs. A linear slider over that
+// range is unusable: with 1,000,000 discrete steps mapped to ~300px of
+// track, every pixel of drag jumps the value by ~3,300, so small quantities
+// (1-1,000) — the range most people actually want to explore — are
+// compressed into a couple of pixels. A log-scale slider fixes this: slider
+// *position* (0-1) maps to quantity on a logarithmic curve, so each unit of
+// slider movement represents a constant *multiplicative* step rather than a
+// constant additive one, giving 1→10, 10→100, 100→1,000, etc. equal screen
+// space.
+const QUANTITY_MIN = 1;
+const QUANTITY_MAX = 1_000_000;
+const LOG_MIN = Math.log10(QUANTITY_MIN);
+const LOG_MAX = Math.log10(QUANTITY_MAX);
+
+/** Maps a linear slider position (0-100) to a quantity (1 to 1,000,000). */
+export function sliderPositionToQuantity(position: number): number {
+  const clamped = Math.min(100, Math.max(0, position));
+  const log = LOG_MIN + (clamped / 100) * (LOG_MAX - LOG_MIN);
+  return Math.round(10 ** log);
+}
+
+/** Inverse of `sliderPositionToQuantity`: maps a quantity to slider position (0-100). */
+export function quantityToSliderPosition(quantity: number): number {
+  const clamped = Math.min(QUANTITY_MAX, Math.max(QUANTITY_MIN, quantity));
+  const log = Math.log10(clamped);
+  return ((log - LOG_MIN) / (LOG_MAX - LOG_MIN)) * 100;
+}
+
+export const QUANTITY_BOUNDS = { min: QUANTITY_MIN, max: QUANTITY_MAX };
