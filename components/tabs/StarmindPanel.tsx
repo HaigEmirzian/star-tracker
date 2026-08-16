@@ -1,5 +1,6 @@
 import { starmind } from "@/lib/data/starmindStatic";
 import GpuSpecComparison from "@/components/tabs/GpuSpecComparison";
+import CapabilityTranslator from "@/components/tabs/CapabilityTranslator";
 
 function LockedStat({ label }: { label: string }) {
   return (
@@ -92,6 +93,10 @@ export default function StarmindPanel() {
       </div>
 
       <GpuSpecComparison />
+
+      <div className="w-full">
+        <CapabilityTranslator />
+      </div>
 
       <p className="text-xs text-white/30">
         Partnership with {starmind.partner} announced {starmind.partnershipAnnounced} ·
