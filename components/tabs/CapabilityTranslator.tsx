@@ -7,65 +7,22 @@ import {
   constellationScale,
   formatFlops,
   formatPower,
+  gpuSpecToGpuLike,
   quantityToSliderPosition,
   relatableComparisons,
   sliderPositionToQuantity,
   QUANTITY_BOUNDS,
-  type GpuLike,
   type Precision,
 } from "@/lib/calc/capabilityTranslator";
 import { starmind } from "@/lib/data/starmindStatic";
+import { gpuSpecs } from "@/lib/data/gpuSpecs";
 
-// ---------------------------------------------------------------------------
-// TEMPORARY LOCAL STUB — will be replaced by a real import from
-// `lib/data/gpuSpecs.ts` once `feature/gpu-spec-comparison` merges. That
-// branch didn't exist in this worktree, so this list exists only so the
-// Capability Translator is fully buildable/demoable standalone in the
-// meantime. Figures are real, stable, long-published specs (low drift risk)
-// — TDP and Tensor Core TFLOPS from each GPU's official NVIDIA datasheet.
-// TFLOPS are converted to raw FLOPS (×10^12) to match `GpuLike.flops`.
-// A GPU with no published figure for a precision simply omits that key —
-// never a fabricated 0.
-const GPU_STUB: GpuLike[] = [
-  {
-    id: "h100-sxm",
-    name: "NVIDIA H100 SXM",
-    // TDP up to 700W; FP16/FP8 Tensor Core TFLOPS as published on
-    // https://www.nvidia.com/en-us/data-center/h100/ (Hopper has no FP4
-    // Tensor Core support, so fp4 is omitted).
-    tdpWatts: 700,
-    flops: {
-      fp16: 1979e12,
-      fp8: 3958e12,
-    },
-  },
-  {
-    id: "h200-sxm",
-    name: "NVIDIA H200 SXM",
-    // Same Hopper compute die as H100 (700W TDP, identical Tensor Core
-    // throughput) with more/faster memory — per
-    // https://www.nvidia.com/en-us/data-center/h200/. No FP4 support.
-    tdpWatts: 700,
-    flops: {
-      fp16: 1979e12,
-      fp8: 3958e12,
-    },
-  },
-  {
-    id: "b200",
-    name: "NVIDIA B200 (Blackwell)",
-    // 1000W TDP; dense (non-sparse) Tensor Core TFLOPS from NVIDIA's
-    // published Blackwell datasheet figures (corroborated across NVIDIA's
-    // HGX B200 datasheet and multiple secondary spec aggregators): FP16/BF16
-    // 2,250 TFLOPS, FP8 4,500 TFLOPS, FP4 9,000 TFLOPS dense.
-    tdpWatts: 1000,
-    flops: {
-      fp16: 2250e12,
-      fp8: 4500e12,
-      fp4: 9000e12,
-    },
-  },
-];
+// Real, cited spec data from lib/data/gpuSpecs.ts, adapted to this
+// calculator's plain-number GpuLike shape (see gpuSpecToGpuLike — it also
+// converts TFLOPS to raw FLOPS). Every GPU there is a genuine compute
+// accelerator (Vera, the companion CPU, lives in `cpuSpecs` and is never
+// included here).
+const GPUS = gpuSpecs.map(gpuSpecToGpuLike);
 
 const PRECISIONS: { key: Precision; label: string }[] = [
   { key: "fp16", label: "FP16" },
@@ -106,7 +63,7 @@ function RelatableComparisonList({
 }
 
 export default function CapabilityTranslator() {
-  const [selectedGpuId, setSelectedGpuId] = useState(GPU_STUB[0].id);
+  const [selectedGpuId, setSelectedGpuId] = useState(GPUS[0].id);
   const [quantity, setQuantity] = useState(1);
   const [precision, setPrecision] = useState<Precision>("fp16");
   const [constellationMode, setConstellationMode] = useState(false);
@@ -116,7 +73,7 @@ export default function CapabilityTranslator() {
   const quantityInputId = useId();
   const gpusPerSatelliteId = useId();
 
-  const gpu = GPU_STUB.find((g) => g.id === selectedGpuId) ?? GPU_STUB[0];
+  const gpu = GPUS.find((g) => g.id === selectedGpuId) ?? GPUS[0];
   const availablePrecisions = PRECISIONS.filter((p) => gpu.flops[p.key] !== undefined);
   const activePrecision = gpu.flops[precision] !== undefined ? precision : availablePrecisions[0].key;
 
@@ -156,7 +113,7 @@ export default function CapabilityTranslator() {
       <div className="mb-5">
         <div className="mb-2 text-xs uppercase tracking-wide text-white/40">GPU</div>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Select GPU">
-          {GPU_STUB.map((g) => (
+          {GPUS.map((g) => (
             <button
               key={g.id}
               type="button"

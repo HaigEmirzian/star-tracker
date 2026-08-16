@@ -2,6 +2,7 @@
 // on purpose — keeping the arithmetic isolated from the component makes it
 // reviewable (and eventually testable) independent of rendering concerns.
 import type { comparisonFactors } from "@/lib/data/comparisonFactors";
+import type { GpuSpec } from "@/lib/data/gpuSpecs";
 
 /** Precision buckets the translator supports. */
 export type Precision = "fp16" | "fp8" | "fp4";
@@ -21,6 +22,28 @@ export interface GpuLike {
   tdpWatts?: number;
   /** Peak Tensor Core throughput in raw FLOPS (not TFLOPS) per precision. */
   flops: Partial<Record<Precision, number>>;
+}
+
+/**
+ * Adapts a `lib/data/gpuSpecs.ts` entry (cited, TFLOPS, GPU-only) into the
+ * `GpuLike` shape this calculator uses (uncited plain numbers, raw FLOPS).
+ * `gpuSpecs.ts` documents its FLOPS figures in TFLOPS, matching how Nvidia
+ * publishes them — this is the one place that ×10^12 conversion happens, so
+ * it's never silently duplicated or missed at a call site. A missing
+ * citation (Nvidia hasn't published that figure yet) stays missing here too
+ * — never coerced to 0.
+ */
+export function gpuSpecToGpuLike(spec: GpuSpec): GpuLike {
+  const flops: Partial<Record<Precision, number>> = {};
+  if (spec.flops.fp16 !== undefined) flops.fp16 = spec.flops.fp16.value * 1e12;
+  if (spec.flops.fp8 !== undefined) flops.fp8 = spec.flops.fp8.value * 1e12;
+  if (spec.flops.fp4 !== undefined) flops.fp4 = spec.flops.fp4.value * 1e12;
+  return {
+    id: spec.id,
+    name: spec.name,
+    tdpWatts: spec.tdpWatts?.value,
+    flops,
+  };
 }
 
 export interface ComputeTotalsInput {
