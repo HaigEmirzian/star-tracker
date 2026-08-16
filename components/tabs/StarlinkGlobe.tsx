@@ -98,6 +98,12 @@ export default function StarlinkGlobe({ entries }: { entries: StarlinkGpEntry[] 
 
       globeInstance.controls().autoRotate = !reduceMotion;
       globeInstance.controls().autoRotateSpeed = 0.4;
+      // The globe sits inline in a scrolling page — OrbitControls binds its
+      // zoom to the mouse wheel by default, which hijacks page scroll the
+      // moment the cursor is over the canvas. Disabling zoom (rotate/pan via
+      // drag still work) stops that without needing a hover-to-activate
+      // wrapper.
+      globeInstance.controls().enableZoom = false;
 
       intervalId = setInterval(() => {
         globeInstance?.particlesData([computePositions()]);
