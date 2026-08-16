@@ -13,13 +13,23 @@ animated starfield background — no routing, no database.
 
 ```bash
 npm run dev      # start dev server (Turbopack) at localhost:3000
-npm run build    # production build
+npm run build    # production build (webpack — see note below)
 npm run start    # serve the production build
 npm run lint     # eslint
 npx tsc --noEmit # type-check only
 ```
 
 There is no test suite in this repo.
+
+**`npm run build` uses `next build --webpack`, not Turbopack.** Turbopack's
+production build stalls indefinitely (no error, no progress) on this
+project's dependency graph — reproduced repeatedly, isolated from every
+other cause (stray processes, lock contention) before concluding it's a
+genuine Turbopack limitation with this combination of large libraries
+(three.js/globe.gl/three-globe + satellite.js's dynamic wasm import). `npm
+run dev` stays on Turbopack and works fine — only the production build path
+is affected. Don't revert `build` to plain `next build` without confirming
+Turbopack's build path has actually been fixed upstream first.
 
 ## Architecture
 
@@ -46,7 +56,9 @@ mismatch against the client's actual time (see the `useNow()` hook in
 `StarlinkPanel.tsx`).
 
 **Data sources** (`lib/data/`):
-- `celestrak.ts` — live satellite orbital data from CelesTrak. **Rate
+- `celestrak.ts` — live satellite orbital data from CelesTrak, exposed via a
+  single `getStarlinkData()` call returning both the computed summary and
+  the raw per-satellite entries (one fetch feeds both — see below). **Rate
   limited to updates every ~2 hours per dataset** — repeated requests return
   a 403 with a plain-text body instead of JSON. Also derives the "active
   satellites by launch year" growth chart from each satellite's `OBJECT_ID`
@@ -76,6 +88,30 @@ parallax (removed intentionally; keep it that way unless asked to re-add).
 single-hue-sequential color (`#3987e5`, checked against this project's black
 background via the dataviz skill's palette validator) — if adding another
 chart, load the `dataviz` skill first rather than picking colors ad hoc.
+
+**3D globe:** `components/tabs/StarlinkGlobe.tsx` renders real satellite
+positions (not simulated) — the same `StarlinkGpEntry` objects from
+`celestrak.ts` are fed straight into `satellite.js`'s `json2satrec()` (its
+input shape matches CelesTrak's OMM/JSON fields exactly) and propagated with
+real SGP4, the same algorithm every serious tracker uses. Positions refresh
+every few seconds (`POSITION_REFRESH_MS`), not per-frame — re-propagating
+thousands of satellites 60×/sec is unnecessary at LEO angular speeds and
+wasteful. Rendered on `globe.gl`'s **particles** layer, not its `points`
+layer — `points` is a bar/pin-chart primitive anchored to the surface (wrong
+shape for a free-floating satellite); `particles` renders true floating
+dots. Loaded via `next/dynamic({ ssr: false })` since it touches
+`window`/`document` and pulls in three.js (~600KB).
+
+`satellite.js`'s optional WASM propagator (unused — this project only calls
+its plain pure-JS API) is why `next.config.ts` has webpack/turbopack config
+you shouldn't remove: it's loaded via `import('#wasm-*-thread')`, a dynamic
+import with a static specifier, so bundlers still eagerly resolve that chunk
+even though nothing here ever calls the functions that would trigger it. That
+chunk's Emscripten loader has top-level `node:module`/`node:worker_threads`
+imports, which webpack 5 rejects with `UnhandledSchemeError` unless
+`IgnorePlugin` skips the chunk (see `next.config.ts`) — this is *why*
+`npm run build` runs webpack instead of Turbopack in the first place (see
+Commands section above).
 
 **Accessibility:** The tab toggle (`TabSwitcher.tsx`) implements the ARIA
 "tablist" pattern with roving `tabindex` (only the active tab is a Tab stop;
