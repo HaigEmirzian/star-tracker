@@ -12,6 +12,16 @@ const STARLINK_GP_URL =
 // cache (which resets on every local `next dev` restart).
 const REVALIDATE_SECONDS = 60 * 60 * 2;
 
+// CelesTrak's throttle clock is per-IP and resets on ANY successful download
+// from that IP (including manual curl/testing outside this app) - it isn't
+// tied to our own request history. That means a fetch attempt can land
+// inside someone/something else's still-open throttle window and fail for
+// reasons unrelated to how long it's been since *our* last attempt. When
+// that happens, retry soon rather than re-arming the full REVALIDATE_SECONDS
+// wait - a failed attempt costs CelesTrak nothing extra, so there's no
+// throttling reason to wait as long as we do after a real success.
+const FAILURE_RETRY_SECONDS = 60 * 15;
+
 // Matches CelesTrak's OMM/JSON GP format, which is also exactly the shape
 // satellite.js's json2satrec() expects — so the same fetch/parse feeds both
 // the summary stats below and the live 3D globe (StarlinkGlobe.tsx) with no
@@ -159,11 +169,16 @@ async function fetchFromCelesTrak(): Promise<StarlinkData> {
 const DISK_CACHE_FILE = path.join(process.cwd(), ".cache", "starlink-data.json");
 
 interface DiskCacheEntry {
-  // Absent until the first successful fetch — but lastAttemptAt is always
-  // recorded, even on failure, so the interval guard below still protects
-  // CelesTrak from repeated attempts before we've ever had a success.
+  // Absent until the first successful fetch.
   data?: StarlinkData;
+  // Recorded on every attempt, success or failure - gates the short
+  // FAILURE_RETRY_SECONDS backoff so a failed attempt can't be retried
+  // instantly in a tight loop.
   lastAttemptAt: number;
+  // Recorded only on success - gates the real REVALIDATE_SECONDS freshness
+  // window. Kept separate from lastAttemptAt so a failure doesn't extend how
+  // long we wait before trying again (see FAILURE_RETRY_SECONDS above).
+  lastSuccessAt?: number;
 }
 
 async function readDiskCache(): Promise<DiskCacheEntry | null> {
@@ -188,25 +203,33 @@ async function fetchStarlinkDataDiskGuarded(): Promise<StarlinkData> {
   const cached = await readDiskCache();
   const now = Date.now();
 
-  if (cached && now - cached.lastAttemptAt < REVALIDATE_SECONDS * 1000) {
-    // Too soon since the last attempt — don't risk another rate-limit hit.
-    // Serve the last known-good snapshot if we have one; otherwise there's
-    // nothing to fall back to yet, but we still skip the network call.
-    if (cached.data) return cached.data;
+  const dataStillFresh =
+    cached?.lastSuccessAt !== undefined && now - cached.lastSuccessAt < REVALIDATE_SECONDS * 1000;
+  const attemptedTooRecently =
+    cached !== null && now - cached.lastAttemptAt < FAILURE_RETRY_SECONDS * 1000;
+
+  if (dataStillFresh || attemptedTooRecently) {
+    // Either the data we have is still within its real freshness window, or
+    // we tried too recently to safely retry yet — serve the last known-good
+    // snapshot if we have one; otherwise there's nothing to fall back to,
+    // but we still skip the network call.
+    if (cached?.data) return cached.data;
     throw new Error(
-      "Skipping fetch: a recent attempt already failed and the guard window hasn't elapsed",
+      "Skipping fetch: a recent attempt already failed and the retry window hasn't elapsed",
     );
   }
 
   try {
     const fresh = await fetchFromCelesTrak();
-    await writeDiskCache({ data: fresh, lastAttemptAt: now });
+    await writeDiskCache({ data: fresh, lastAttemptAt: now, lastSuccessAt: now });
     return fresh;
   } catch (err) {
     // Always record the attempt, even with no prior data to fall back on —
     // this is what stops repeated dev-server restarts from each re-hitting
-    // CelesTrak while we've never yet had a successful fetch.
-    await writeDiskCache({ data: cached?.data, lastAttemptAt: now });
+    // CelesTrak while we've never yet had a successful fetch. lastSuccessAt
+    // is deliberately carried forward unchanged (not touched) so a failure
+    // never extends the real freshness window, only the short retry gate.
+    await writeDiskCache({ data: cached?.data, lastAttemptAt: now, lastSuccessAt: cached?.lastSuccessAt });
     if (cached?.data) return cached.data;
     throw err;
   }
