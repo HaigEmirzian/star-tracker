@@ -65,8 +65,19 @@ async function fetchLaunches(
   });
 }
 
+// LL2's /upcoming/ endpoint sometimes keeps a launch listed for a while
+// after it has actually already flown (observed lag: the same launch shows
+// up correctly under /previous/ well before it's removed from /upcoming/).
+// Filter those out here so "next launch" never shows an already-resolved
+// launch — expand this set if LL2 is observed using another terminal
+// status name.
+const TERMINAL_STATUSES = new Set(["Launch Successful", "Launch Failure", "Partial Failure"]);
+
 export async function getUpcomingStarlinkLaunches(limit = 5) {
-  return fetchLaunches("upcoming", limit);
+  // Fetch a little extra headroom so filtering out any stale terminal-status
+  // entries doesn't silently shrink the returned list below `limit`.
+  const launches = await fetchLaunches("upcoming", limit + 3);
+  return launches.filter((l) => !TERMINAL_STATUSES.has(l.statusName)).slice(0, limit);
 }
 
 export async function getRecentStarlinkLaunches(limit = 5) {
