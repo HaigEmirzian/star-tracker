@@ -47,7 +47,7 @@ function GpuImage({ gpu }: { gpu: GpuSpec }) {
       <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black/40">
         <Image
           src={gpu.imageUrl}
-          alt={gpu.name}
+          alt={gpu.imageCaption ?? gpu.name}
           fill
           sizes="(min-width: 640px) 33vw, 100vw"
           className="object-contain"
@@ -59,7 +59,7 @@ function GpuImage({ gpu }: { gpu: GpuSpec }) {
         rel="noopener noreferrer"
         className="mt-1 block text-xs text-white/30 underline decoration-white/20 hover:text-white/50"
       >
-        Photo: Nvidia
+        {gpu.imageCaption ?? "Photo: Nvidia"}
       </a>
     </div>
   );
@@ -260,14 +260,14 @@ export default function GpuSpecComparison() {
           key={cpu.id}
           className="w-full max-w-sm rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-sm"
         >
-          <div className="mb-3 w-24">
+          <div className="mb-3 w-full">
             {cpu.imageUrl ? (
               <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black/40">
                 <Image
                   src={cpu.imageUrl}
-                  alt={cpu.name}
+                  alt={cpu.imageCaption ?? cpu.name}
                   fill
-                  sizes="150px"
+                  sizes="(min-width: 640px) 24rem, 100vw"
                   className="object-contain"
                 />
               </div>
@@ -300,7 +300,7 @@ export default function GpuSpecComparison() {
             rel="noopener noreferrer"
             className="mt-3 inline-block text-xs text-white/30 underline decoration-white/20 hover:text-white/50"
           >
-            Source: Nvidia
+            {cpu.imageCaption ?? "Source: Nvidia"}
           </a>
         </div>
       ))}

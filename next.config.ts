@@ -17,14 +17,23 @@ const NODE_BUILTIN_STUB = "./lib/empty-module.ts";
 
 const nextConfig: NextConfig = {
   images: {
-    // Scoped narrowly to the exact hostname actually hotlinked from
-    // lib/data/gpuSpecs.ts (the Nvidia B200 product image) — don't widen
-    // this without a corresponding new hotlinked image.
+    // Scoped narrowly to the exact hostnames actually hotlinked from
+    // lib/data/gpuSpecs.ts — don't widen this without a corresponding new
+    // hotlinked image.
     remotePatterns: [
       {
         protocol: "https",
         hostname: "www.nvidia.com",
         pathname: "/content/dam/**",
+      },
+      {
+        // Nvidia Newsroom's press-photo CDN (iprsoftwaremedia.com, aka
+        // Intrado/Notified) — hosts the H100/Rubin/Vera product photos,
+        // since those press releases don't publish images under
+        // www.nvidia.com/content/dam like the B200 datasheet does.
+        protocol: "https",
+        hostname: "iprsoftwaremedia.com",
+        pathname: "/219/files/**",
       },
     ],
   },
