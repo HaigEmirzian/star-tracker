@@ -145,26 +145,24 @@ export function relatableComparisons(
   ];
 }
 
-export interface ConstellationScaleInput {
-  gpusPerSatellite: number;
-  satelliteCount: number;
-  perGpu: {
-    tdpWatts?: number;
-    flopsByPrecision: Partial<Record<Precision, number>>;
-  };
-}
-
-/** Totals at hypothetical constellation scale: quantity = GPUs/satellite × satellite count. */
-export function constellationScale({
-  gpusPerSatellite,
-  satelliteCount,
-  perGpu,
-}: ConstellationScaleInput): ComputeTotalsResult {
-  return computeTotals({
-    tdpWatts: perGpu.tdpWatts,
-    flopsByPrecision: perGpu.flopsByPrecision,
-    quantity: gpusPerSatellite * satelliteCount,
-  });
+/**
+ * Compute-side counterpart to relatableComparisons(). Currently a single
+ * comparison (PS5 GPU FLOPS) — a direct FLOPS-to-FLOPS comparison, unlike a
+ * TOPS-based device spec (integer/quantized ops, a different unit). Still
+ * approximate in spirit (dense FP32 GPU shader throughput vs. Tensor Core
+ * matrix-multiply FLOPS at a specific precision), so the label says
+ * "GPU compute" rather than implying an exact equivalence.
+ */
+export function computeRelatableComparisons(
+  totalFlops: number,
+  factors: typeof comparisonFactors,
+): RelatableComparison[] {
+  return [
+    {
+      label: "PlayStation 5s' worth of GPU compute",
+      count: totalFlops / (factors.ps5GpuTflops.value * 1e12),
+    },
+  ];
 }
 
 // --- Log-scale slider mapping -------------------------------------------
