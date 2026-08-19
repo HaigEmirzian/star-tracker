@@ -55,4 +55,26 @@ export const comparisonFactors = {
       "U.S. DOE Land-Based Wind Market Report, 2024 Edition — average nameplate capacity of turbines installed in 2023",
     lastUpdated: "2026-08-16",
   },
+  // PlayStation 5 GPU compute throughput — a direct FLOPS-to-FLOPS
+  // comparison, unlike a TOPS-based figure (e.g. a phone's integer/
+  // quantized Neural Engine spec), since both this and the GPU flops
+  // figures elsewhere in this app are floating-point operations/sec. Sony
+  // doesn't restate the number on playstation.com's consumer spec pages —
+  // it comes from Mark Cerny's official "Road to PS5" presentation (March
+  // 2020), reported here via Android Central's coverage, titled "PS5 specs
+  // officially detailed by Sony."
+  //
+  // Still an approximation, not a precise equivalence: this is dense FP32
+  // GPU shader throughput (gaming workload), not Tensor Core matrix-multiply
+  // FLOPS at a specific precision (the figures used elsewhere in this app)
+  // — different hardware, same unit family. Any comparison using this
+  // constant should note that.
+  ps5GpuTflops: {
+    value: 10.28,
+    unit: "TFLOPS (FP32 GPU compute)",
+    source: "https://www.androidcentral.com/ps5-specs-detailed-mark-cerny",
+    sourceLabel:
+      "Android Central — \"PS5 specs officially detailed by Sony\" (from Mark Cerny's Road to PS5 presentation)",
+    lastUpdated: "2026-08-19",
+  },
 } satisfies Record<string, CitedConstant>;
