@@ -5,6 +5,10 @@
 // published a figure (common for Rubin, which is pre-launch), leave that
 // field `undefined` and let the UI render it as pending — do not guess.
 //
+// `gpuSpecs` holds only hardware Starmind actually uses (Rubin). Don't add
+// other Nvidia GPUs (B200, H100, etc.) here as "comparison points" — this
+// page is a Starmind reference, not a general Nvidia GPU comparison tool.
+//
 // Units, fixed across this file:
 //   - FLOPS figures are TFLOPS (teraFLOPS). Nvidia typically publishes Tensor
 //     Core throughput in petaFLOPS "with sparsity" (2x the dense/no-sparsity
@@ -34,6 +38,11 @@ export interface GpuSpec {
   status: "announced" | "shipping" | "sampling";
   relationToStarmind: string;
   imageUrl?: string;
+  // What the photo actually shows, since not every official photo is a
+  // bare isolated die/module shot (e.g. Nvidia hasn't photographed a
+  // standalone Rubin GPU — the only real photo available is of the Vera
+  // Rubin compute tray). Defaults to the GPU name in the UI when omitted.
+  imageCaption?: string;
   imageSourcePage: string;
   tdpWatts?: CitedFigure<number>;
   memoryCapacityGB?: CitedFigure<number>;
@@ -55,11 +64,13 @@ export const gpuSpecs: GpuSpec[] = [
     announced: "March 2025 (GTC), full-system detail at GTC 2026",
     status: "announced",
     relationToStarmind: "Named in Starmind's hardware stack",
-    imageSourcePage: "https://nvidianews.nvidia.com/news/rubin-platform-ai-supercomputer",
+    imageUrl:
+      "https://iprsoftwaremedia.com/219/files/202603/69b832203d63321ac974de07_nvidia-vera-rubin-family/nvidia-vera-rubin-family_mid.jpg",
+    imageCaption: "Vera Rubin compute tray (Nvidia has not photographed a standalone Rubin GPU)",
+    imageSourcePage: "https://nvidianews.nvidia.com/news/nvidia-vera-rubin-platform",
     // Nvidia has not published per-GPU TDP, memory capacity, or memory
     // bandwidth for the standalone Rubin GPU as of this writing — those
-    // figures are disclosed only at the Vera Rubin NVL72 rack level, which
-    // isn't a like-for-like comparison with the single-GPU rows below. Left
+    // figures are disclosed only at the Vera Rubin NVL72 rack level. Left
     // undefined rather than derived/estimated.
     flops: {
       fp4: {
@@ -75,110 +86,7 @@ export const gpuSpecs: GpuSpec[] = [
       sourceLabel: "Nvidia Newsroom — Rubin platform announcement",
       note: "Per-GPU NVLink bandwidth (\"each GPU offers 3.6TB/s of bandwidth\"); the Vera Rubin NVL72 rack aggregates to 260TB/s",
     },
-    lastUpdated: "2026-08-16",
-  },
-  {
-    id: "b200",
-    name: "Nvidia B200 (Blackwell)",
-    generation: "Blackwell",
-    announced: "March 2024 (GTC)",
-    status: "shipping",
-    relationToStarmind: "Comparison point",
-    imageUrl:
-      "https://www.nvidia.com/content/dam/en-zz/Solutions/data-center/dgx-b200/dgx-b200-hero-bm-v2-l580-d.jpg",
-    imageSourcePage: "https://www.nvidia.com/en-us/data-center/dgx-b200/",
-    tdpWatts: {
-      value: 1000,
-      source: "https://resources.nvidia.com/en-us-blackwell-architecture/datasheet",
-      sourceLabel: "Nvidia Blackwell datasheet",
-      note: "Configurable up to 1,000W; individual GPU spec within an 8-GPU HGX B200 baseboard",
-    },
-    memoryCapacityGB: {
-      value: 180,
-      source: "https://resources.nvidia.com/en-us-blackwell-architecture/datasheet",
-      sourceLabel: "Nvidia Blackwell datasheet",
-      note: "180GB HBM3e per GPU, HGX B200 configuration",
-    },
-    memoryBandwidthTBs: {
-      value: 7.7,
-      source: "https://resources.nvidia.com/en-us-blackwell-architecture/datasheet",
-      sourceLabel: "Nvidia Blackwell datasheet",
-    },
-    flops: {
-      fp16: {
-        value: 4500,
-        source: "https://resources.nvidia.com/en-us-blackwell-architecture/datasheet",
-        sourceLabel: "Nvidia Blackwell datasheet",
-        note: "4.5 petaFLOPS FP16/BF16 Tensor Core, with sparsity",
-      },
-      fp8: {
-        value: 9000,
-        source: "https://resources.nvidia.com/en-us-blackwell-architecture/datasheet",
-        sourceLabel: "Nvidia Blackwell datasheet",
-        note: "9 petaFLOPS FP8/FP6 Tensor Core, with sparsity",
-      },
-      fp4: {
-        value: 18_000,
-        source: "https://resources.nvidia.com/en-us-blackwell-architecture/datasheet",
-        sourceLabel: "Nvidia Blackwell datasheet",
-        note: "18 petaFLOPS FP4 Tensor Core, with sparsity",
-      },
-    },
-    interconnectBandwidthGBs: {
-      value: 1800,
-      source: "https://resources.nvidia.com/en-us-blackwell-architecture/datasheet",
-      sourceLabel: "Nvidia Blackwell datasheet",
-      note: "5th-generation NVLink, GPU-to-GPU",
-    },
-    lastUpdated: "2026-08-16",
-  },
-  {
-    id: "h100",
-    name: "Nvidia H100 (Hopper, SXM5)",
-    generation: "Hopper",
-    announced: "March 2022 (GTC)",
-    status: "shipping",
-    relationToStarmind: "Comparison point",
-    imageSourcePage: "https://www.nvidia.com/en-us/data-center/h100/",
-    tdpWatts: {
-      value: 700,
-      source: "https://www.nvidia.com/en-us/data-center/h100/",
-      sourceLabel: "Nvidia H100 product page",
-      note: "Up to 700W, configurable, SXM5",
-    },
-    memoryCapacityGB: {
-      value: 80,
-      source: "https://www.nvidia.com/en-us/data-center/h100/",
-      sourceLabel: "Nvidia H100 product page",
-    },
-    memoryBandwidthTBs: {
-      value: 3.35,
-      source: "https://www.nvidia.com/en-us/data-center/h100/",
-      sourceLabel: "Nvidia H100 product page",
-    },
-    flops: {
-      fp16: {
-        value: 1979,
-        source: "https://www.nvidia.com/en-us/data-center/h100/",
-        sourceLabel: "Nvidia H100 product page",
-        note: "1,979 teraFLOPS FP16 Tensor Core, with sparsity",
-      },
-      fp8: {
-        value: 3958,
-        source: "https://www.nvidia.com/en-us/data-center/h100/",
-        sourceLabel: "Nvidia H100 product page",
-        note: "3,958 teraFLOPS FP8 Tensor Core, with sparsity",
-      },
-      // Hopper predates Blackwell's native FP4 Tensor Core support — Nvidia
-      // has not published an FP4 figure for H100. Left undefined.
-    },
-    interconnectBandwidthGBs: {
-      value: 900,
-      source: "https://www.nvidia.com/en-us/data-center/h100/",
-      sourceLabel: "Nvidia H100 product page",
-      note: "NVLink, SXM5",
-    },
-    lastUpdated: "2026-08-16",
+    lastUpdated: "2026-08-19",
   },
 ];
 
@@ -189,6 +97,8 @@ export interface CpuSpec {
   tdpWatts?: CitedFigure<number>;
   role: string;
   imageUrl?: string;
+  // See GpuSpec.imageCaption — same reasoning applies here.
+  imageCaption?: string;
   imageSourcePage: string;
   lastUpdated: string;
 }
@@ -205,7 +115,10 @@ export const cpuSpecs: CpuSpec[] = [
     },
     // Nvidia has not published a TDP figure for Vera. Left undefined.
     role: "Arm companion CPU in the Vera Rubin platform — not a GPU, and Nvidia has not published FLOPS figures for it. Handles agentic AI/RL orchestration, tool execution, and data pipelines alongside Rubin GPUs.",
-    imageSourcePage: "https://www.nvidia.com/en-us/data-center/vera-cpu/",
-    lastUpdated: "2026-08-16",
+    imageUrl:
+      "https://iprsoftwaremedia.com/219/files/202603/69b83bf73d6332289074debc_vera-cpu-rack/vera-cpu-rack_mid.png",
+    imageCaption: "Vera CPU rack (Nvidia has not photographed a standalone Vera CPU module)",
+    imageSourcePage: "https://nvidianews.nvidia.com/news/nvidia-vera-rubin-platform",
+    lastUpdated: "2026-08-19",
   },
 ];

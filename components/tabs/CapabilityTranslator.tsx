@@ -67,7 +67,9 @@ export default function CapabilityTranslator() {
   const [quantity, setQuantity] = useState(1);
   const [precision, setPrecision] = useState<Precision>("fp16");
   const [constellationMode, setConstellationMode] = useState(false);
-  const [gpusPerSatellite, setGpusPerSatellite] = useState(1);
+  const [gpusPerSatellite, setGpusPerSatellite] = useState(
+    starmind.perSatelliteHardware.rubinGpuCount.value,
+  );
 
   const sliderId = useId();
   const quantityInputId = useId();
@@ -208,16 +210,19 @@ export default function CapabilityTranslator() {
         {constellationMode && (
           <div className="mt-3 flex flex-col gap-3">
             <p className="text-xs leading-relaxed text-amber-300/70">
-              Hypothetical scenario — not a SpaceX-stated figure. Based on the FCC
-              filing&apos;s request for {starmind.fccFiling.requestedSatellites.toLocaleString()}{" "}
-              satellites.
+              Hypothetical scenario — SpaceX has not stated a target total
+              power/compute figure. Defaults to the confirmed{" "}
+              {starmind.perSatelliteHardware.rubinGpuCount.value} Rubin GPUs
+              per satellite, scaled across the FCC filing&apos;s request for{" "}
+              {starmind.fccFiling.requestedSatellites.toLocaleString()} satellites
+              — override below to explore other assumptions.
             </p>
             <div>
               <label
                 htmlFor={gpusPerSatelliteId}
                 className="mb-1 block text-xs uppercase tracking-wide text-amber-300/70"
               >
-                Assumed GPUs per satellite
+                GPUs per satellite
               </label>
               <input
                 id={gpusPerSatelliteId}
