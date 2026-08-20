@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   humanityPosition,
@@ -8,41 +8,49 @@ import {
   kardashevStages,
 } from "@/lib/data/kardashev";
 
-// --- Zoom-out illusion -----------------------------------------------------
+// --- Zoom-out illusion, free-scroll variant --------------------------------
 //
 // No single photograph zooms continuously from Earth to the Milky Way — real
-// astronomy imagery is discrete captures at wildly different distances. The
-// continuity is built the same way every "cosmic zoom" does it: each stage's
-// image is layered in the same fixed box, and moving forward scales the
-// outgoing image *up* (it rushes past the viewer) while the incoming one
-// scales from small to natural size. The net read is "pulling back", even
-// though each frame is a separate photo.
+// astronomy imagery is discrete captures at wildly different distances. This
+// variant builds the "pulling back" read *without* touching the scroll:
 //
-// SCALE_PAST is how large a stage grows once you've moved beyond it;
-// SCALE_FUTURE is how small a not-yet-reached stage sits. Both are modest —
-// overshooting makes the seam between photos obvious.
-const SCALE_PAST = 2.6;
-const SCALE_FUTURE = 0.35;
+//  1. Each stage is an ordinary full-viewport section stacked in the
+//     document, so the wheel/trackpad/scrollbar behave exactly as they do on
+//     the rest of the page. Nothing is hijacked, nothing is snapped by JS.
+//  2. Each successive stage renders its image *smaller inside its own
+//     frame* — the planet nearly fills the viewport, the star sits back from
+//     it, the galaxy is a distant speck. Scrolling down therefore reads as
+//     the camera retreating, purely from the fixed sizes below.
+//  3. An IntersectionObserver flips a per-section "revealed" flag once the
+//     section is meaningfully on screen; a CSS transition then carries it
+//     from a slightly smaller scale + zero opacity to full size + full
+//     opacity. No scroll-position math is involved anywhere.
+//
+// Frame size per stage. These are the whole zoom-out effect — keep them
+// strictly decreasing.
+const STAGE_FRAME_SIZE = [
+  "min(78vmin, 78vw)", // Type I  — planet fills the frame
+  "min(48vmin, 48vw)", // Type II — star, noticeably further off
+  "min(28vmin, 28vw)", // Type III — galaxy, most distant of all
+];
 
-// Wheel/touch input is locked out for this long after a stage change, so one
-// physical scroll gesture (which fires many wheel events) advances exactly
-// one stage instead of blowing through all three.
-const TRANSITION_MS = 900;
+// How small a section starts before it animates in, and how long that takes.
+const ENTER_SCALE = 0.82;
+const ENTER_MS = 900;
 
-// A single wheel event from a trackpad can be a fraction of a "notch"; this
-// keeps stray sub-threshold movement from triggering a stage change.
-const WHEEL_THRESHOLD = 20;
+// Fraction of a section that must be on screen before it animates in. Low
+// enough that the animation plays while the section is arriving rather than
+// after it has already settled.
+const REVEAL_RATIO = 0.3;
 
-function stageTransform(index: number, active: number) {
-  if (index === active) return { scale: 1, opacity: 1 };
-  if (index < active) return { scale: SCALE_PAST, opacity: 0 };
-  return { scale: SCALE_FUTURE, opacity: 0 };
-}
+// A 10%-tall band across the middle of the viewport. Whichever section
+// overlaps it is "the one you're looking at" — used only to light the
+// progress dots, never to move the scroll.
+const CENTER_BAND_MARGIN = "-45% 0px -45% 0px";
 
 /**
  * Thin white leader line running from near the body out to the caption,
- * plus the caption itself. Rendered per stage and only shown while that
- * stage is active.
+ * plus the caption itself. Fades in with its section.
  */
 function StageCaption({
   stage,
@@ -53,13 +61,12 @@ function StageCaption({
 }) {
   return (
     <div
-      className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${
+      className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ease-out ${
         visible ? "opacity-100" : "opacity-0"
       }`}
-      aria-hidden={!visible}
     >
       {/* Caption block sits bottom-left on mobile, mid-left on larger screens */}
-      <div className="absolute bottom-16 left-6 max-w-xs sm:bottom-auto sm:left-12 sm:top-1/2 sm:max-w-sm sm:-translate-y-1/2">
+      <div className="absolute bottom-24 left-6 max-w-xs sm:bottom-auto sm:left-12 sm:top-1/2 sm:max-w-sm sm:-translate-y-1/2">
         {/* Leader line: a hairline rule that reads as pointing at the body */}
         <div className="mb-4 flex items-center gap-3">
           <div className="h-px w-16 bg-white/60 sm:w-24" />
@@ -120,11 +127,12 @@ function ReducedMotionStages() {
 }
 
 export default function ScalePanel() {
-  const [active, setActive] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const lockedUntil = useRef(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const touchStartY = useRef<number | null>(null);
+  const [revealed, setRevealed] = useState<boolean[]>(() =>
+    kardashevStages.map(() => false),
+  );
+  const [active, setActive] = useState(0);
+  const sectionRefs = useRef<(HTMLElement | null)[]>([]);
 
   // Matches the existing convention in Starfield.tsx: read the media query
   // in JS rather than duplicating the behavior in CSS.
@@ -137,71 +145,77 @@ export default function ScalePanel() {
     return () => mq.removeEventListener("change", onChange);
   }, []);
 
-  // Returns true when the gesture was consumed (a stage change happened).
-  // Returning false at either end is deliberate: it lets the page scroll
-  // normally so the user is never trapped inside this panel.
-  const advance = useCallback(
-    (direction: 1 | -1) => {
-      const now = Date.now();
-      if (now < lockedUntil.current) return true;
-
-      const next = active + direction;
-      if (next < 0 || next >= kardashevStages.length) return false;
-
-      lockedUntil.current = now + TRANSITION_MS;
-      setActive(next);
-      return true;
-    },
-    [active],
-  );
+  // The page itself is the scroll container (these sections sit in normal
+  // document flow), so the snap declaration has to live on the root element
+  // — a `scroll-snap-type` on a non-scrolling wrapper does nothing. It's set
+  // imperatively rather than in globals.css because it must apply only while
+  // this tab is mounted, and it's `proximity` so it nudges toward a stage
+  // without ever trapping a scroll mid-gesture.
+  useEffect(() => {
+    if (reducedMotion) return;
+    const root = document.documentElement;
+    const previous = root.style.scrollSnapType;
+    root.style.scrollSnapType = "y proximity";
+    return () => {
+      root.style.scrollSnapType = previous;
+    };
+  }, [reducedMotion]);
 
   useEffect(() => {
     if (reducedMotion) return;
-    const el = containerRef.current;
-    if (!el) return;
+    const sections = sectionRefs.current.filter(
+      (el): el is HTMLElement => el !== null,
+    );
+    if (sections.length === 0) return;
 
-    function onWheel(e: WheelEvent) {
-      if (Math.abs(e.deltaY) < WHEEL_THRESHOLD) return;
-      const consumed = advance(e.deltaY > 0 ? 1 : -1);
-      // Only swallow the scroll while there's still a stage to move to.
-      if (consumed) e.preventDefault();
+    // Reveal: latch each section on the first time it's sufficiently in view
+    // and stop watching it. Latching (rather than toggling) means scrolling
+    // back up doesn't re-play the animation in your face.
+    const revealObserver = new IntersectionObserver(
+      (entries) => {
+        const hits: number[] = [];
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const i = sectionRefs.current.indexOf(entry.target as HTMLElement);
+          if (i < 0) continue;
+          hits.push(i);
+          revealObserver.unobserve(entry.target);
+        }
+        if (hits.length === 0) return;
+        setRevealed((prev) => {
+          let next = prev;
+          for (const i of hits) {
+            if (prev[i]) continue;
+            if (next === prev) next = [...prev];
+            next[i] = true;
+          }
+          return next;
+        });
+      },
+      { threshold: REVEAL_RATIO },
+    );
+
+    // Active: which section currently crosses the middle of the viewport.
+    const activeObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const i = sectionRefs.current.indexOf(entry.target as HTMLElement);
+          if (i >= 0) setActive(i);
+        }
+      },
+      { rootMargin: CENTER_BAND_MARGIN, threshold: 0 },
+    );
+
+    for (const section of sections) {
+      revealObserver.observe(section);
+      activeObserver.observe(section);
     }
-
-    function onTouchStart(e: TouchEvent) {
-      touchStartY.current = e.touches[0]?.clientY ?? null;
-    }
-
-    function onTouchMove(e: TouchEvent) {
-      const start = touchStartY.current;
-      if (start === null) return;
-      const delta = start - (e.touches[0]?.clientY ?? start);
-      if (Math.abs(delta) < 40) return;
-      touchStartY.current = null;
-      const consumed = advance(delta > 0 ? 1 : -1);
-      if (consumed && e.cancelable) e.preventDefault();
-    }
-
-    // passive: false so preventDefault actually suppresses the page scroll.
-    el.addEventListener("wheel", onWheel, { passive: false });
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
     return () => {
-      el.removeEventListener("wheel", onWheel);
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove", onTouchMove);
+      revealObserver.disconnect();
+      activeObserver.disconnect();
     };
-  }, [advance, reducedMotion]);
-
-  // Up/Down arrows move between stages when the panel has focus. Left/Right
-  // are deliberately untouched — TabSwitcher owns those globally for tab
-  // switching.
-  function onKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "ArrowDown" || e.key === "PageDown") {
-      if (advance(1)) e.preventDefault();
-    } else if (e.key === "ArrowUp" || e.key === "PageUp") {
-      if (advance(-1)) e.preventDefault();
-    }
-  }
+  }, [reducedMotion]);
 
   if (reducedMotion) {
     return (
@@ -213,82 +227,106 @@ export default function ScalePanel() {
   }
 
   return (
-    <div
-      ref={containerRef}
-      tabIndex={0}
-      onKeyDown={onKeyDown}
-      aria-label="Kardashev scale, scroll to zoom out between stages"
-      // Breaks out of <main>'s horizontal padding so the visual runs edge to
-      // edge. Only the *bottom* padding is cancelled (-mb-16) — cancelling
-      // the top too would pull the panel up over the tab bar. The height
-      // subtracts the tab bar + main's top padding so one stage fills what's
-      // left of the viewport without forcing page scroll.
-      className="relative left-1/2 -mb-16 h-[calc(100svh-10rem)] w-[100vw] -translate-x-1/2 overflow-hidden bg-black focus:outline-none"
-    >
-      {/* Layered image stack — all stages occupy the same box; scale/opacity
-          decide which one you're looking at. */}
-      {kardashevStages.map((stage, i) => {
-        const { scale, opacity } = stageTransform(i, active);
-        return (
-          <div
-            key={stage.id}
-            className="absolute inset-0 flex items-center justify-center transition-all ease-out"
-            style={{
-              transform: `scale(${scale})`,
-              opacity,
-              transitionDuration: `${TRANSITION_MS}ms`,
-              // Keeps offscreen stages from eating pointer events.
-              pointerEvents: i === active ? "auto" : "none",
-            }}
-          >
-            <div className="relative h-[min(78vmin,78vw)] w-[min(78vmin,78vw)] overflow-hidden rounded-full">
-              <Image
-                src={stage.imageUrl}
-                alt={stage.imageAlt}
-                fill
-                sizes="100vw"
-                priority={i === 0}
-                className="object-cover"
-              />
-            </div>
-          </div>
-        );
-      })}
+    <div>
+      {/* Breaks out of <main>'s horizontal padding so the stages run edge to
+          edge. Note this wrapper is transformed (-translate-x-1/2), which
+          would make any `fixed` descendant position against *it* rather than
+          the viewport — which is why the progress dots live outside it. */}
+      <div className="relative left-1/2 w-[100vw] -translate-x-1/2 bg-black">
+        {kardashevStages.map((stage, i) => {
+          const isRevealed = revealed[i];
+          return (
+            <section
+              key={stage.id}
+              ref={(el) => {
+                sectionRefs.current[i] = el;
+              }}
+              aria-label={`Type ${stage.type} — ${stage.title}`}
+              // scroll-snap-align lives on the sections; the matching
+              // scroll-snap-type is set on <html> in the effect above.
+              //
+              // Stage I is deliberately left unsnapped. It starts ~150px down
+              // the page (below the tab bar), so a `center` alignment puts a
+              // snap point there — and measuring it in Chrome, that point
+              // captures every scroll offset from 0 to ~300px: switching to
+              // this tab yanked the page down to 149 on its own, and scrolling
+              // back up snapped straight back, leaving the tab toggle
+              // unreachable. Snapping only earns its keep *between* stages.
+              className={`relative flex h-[100svh] items-center justify-center overflow-hidden ${
+                i === 0 ? "" : "snap-center"
+              }`}
+            >
+              <div
+                className="transition-[transform,opacity] ease-out will-change-transform"
+                style={{
+                  width: STAGE_FRAME_SIZE[i],
+                  height: STAGE_FRAME_SIZE[i],
+                  transform: `scale(${isRevealed ? 1 : ENTER_SCALE})`,
+                  opacity: isRevealed ? 1 : 0,
+                  transitionDuration: `${ENTER_MS}ms`,
+                }}
+              >
+                <div className="relative h-full w-full overflow-hidden rounded-full">
+                  <Image
+                    src={stage.imageUrl}
+                    alt={stage.imageAlt}
+                    fill
+                    sizes="100vw"
+                    priority={i === 0}
+                    className="object-cover"
+                  />
+                </div>
+              </div>
 
-      {/* Captions + leader lines, one per stage */}
-      {kardashevStages.map((stage, i) => (
-        <StageCaption key={stage.id} stage={stage} visible={i === active} />
-      ))}
+              <StageCaption stage={stage} visible={isRevealed} />
 
-      {/* Stage progress dots — also the "you are here" affordance */}
-      <div className="absolute right-6 top-1/2 flex -translate-y-1/2 flex-col gap-3 sm:right-12">
+              {/* Image credit — required for the ESO photo (CC BY 4.0), and
+                  NASA asks to be acknowledged as the source of its imagery. */}
+              <div className="pointer-events-none absolute bottom-6 right-6 text-right text-[10px] leading-relaxed text-white/30 sm:right-12">
+                Image: {stage.imageCredit}
+              </div>
+
+              {/* Scroll hint on the first stage only, gone once you've moved */}
+              {i === 0 && (
+                <div
+                  className={`pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 text-xs uppercase tracking-widest text-white/40 transition-opacity duration-500 ${
+                    active === 0 ? "opacity-100" : "opacity-0"
+                  }`}
+                >
+                  Scroll to zoom out
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
+
+      {/* Stage progress dots — "you are here", and a shortcut to each stage.
+          Fixed so they ride along the whole scroll rather than scrolling away
+          with the first section, and therefore kept out of the transformed
+          full-bleed wrapper above. */}
+      <div className="pointer-events-none fixed right-6 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-3 sm:right-12">
         {kardashevStages.map((stage, i) => (
           <button
             key={stage.id}
             type="button"
-            onClick={() => setActive(i)}
-            aria-label={`Show Type ${stage.type} — ${stage.title}`}
+            onClick={() =>
+              sectionRefs.current[i]?.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              })
+            }
+            aria-label={`Scroll to Type ${stage.type} — ${stage.title}`}
             aria-current={i === active}
-            className={`h-2 w-2 rounded-full transition-colors ${
+            className={`pointer-events-auto h-2 w-2 rounded-full transition-colors ${
               i === active ? "bg-white" : "bg-white/25 hover:bg-white/50"
             }`}
           />
         ))}
       </div>
 
-      {/* Scroll hint, fades out once the user has moved at all */}
-      <div
-        className={`pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 text-xs uppercase tracking-widest text-white/40 transition-opacity duration-500 ${
-          active === 0 ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        Scroll to zoom out
-      </div>
-
-      {/* Image credit — required for the ESO photo (CC BY 4.0), and NASA asks
-          to be acknowledged as the source of its imagery. */}
-      <div className="pointer-events-none absolute bottom-6 right-6 text-right text-[10px] leading-relaxed text-white/30 sm:right-12">
-        Image: {kardashevStages[active].imageCredit}
+      <div className="mx-auto max-w-4xl">
+        <ScaleFootnote />
       </div>
     </div>
   );
