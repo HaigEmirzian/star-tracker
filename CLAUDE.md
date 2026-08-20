@@ -6,9 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A live tracker for SpaceX's space infrastructure: the **Starlink** broadband
 constellation and **Starmind**, SpaceX's orbital AI data center program (built
-with Nvidia), plus a **Scale** tab visualizing the Kardashev scale. Single-page
-app with a Starmind/Starlink/Scale tab toggle over an animated starfield
-background — no routing, no database.
+with Nvidia), plus a **Deals** tab tracking SpaceX's third-party AI compute
+contracts (Colossus data center leases) and a **Scale** tab visualizing the
+Kardashev scale. Single-page app with a Starmind/Starlink/Deals/Scale tab
+toggle over an animated starfield background — no routing, no database.
 
 ## Commands
 
@@ -48,11 +49,12 @@ successful result instead of the page going blank).
 (`lib/data/*`) in parallel, then hands it as props into
 `components/TabSwitcher.tsx` — a Client Component that owns which tab is
 active. Because `TabSwitcher` imports `StarlinkPanel`/`StarmindPanel`/
-`StarlinkGrowthChart`/`ScalePanel` directly (not via `children`), those are
-part of the client module graph too, even without their own `"use client"`
-directive. `ScalePanel` is the exception to the props-from-the-server
-pattern — its content (`lib/data/kardashev.ts`) is static, so it needs no
-server fetch and takes no props.
+`StarlinkGrowthChart`/`DealsPanel`/`ScalePanel` directly (not via
+`children`), those are part of the client module graph too, even without
+their own `"use client"` directive. `DealsPanel` and `ScalePanel` are the
+exceptions to the props-from-the-server pattern — their content
+(`lib/data/dealsStatic.ts`, `lib/data/kardashev.ts`) is static, so neither
+needs a server fetch or takes props.
 Anything in that tree that depends on wall-clock time (`Date.now()`) must
 compute it in a `useEffect` after mount, not during render — render also runs
 during SSR, and baking "now" into the server-rendered HTML causes a hydration
@@ -82,6 +84,13 @@ mismatch against the client's actual time (see the `useNow()` hook in
   Starmind has no live telemetry yet, so the UI intentionally renders its
   metrics grid as locked/pending (`StarmindPanel.tsx`) rather than showing a
   number.
+- `dealsStatic.ts` — manually maintained data on SpaceX's third-party AI
+  compute contracts (Colossus data center leases with Anthropic, Google,
+  Reflection AI, plus the Cursor acquisition), rendered by `DealsPanel.tsx`.
+  Same discipline as `fccStatic.ts`/`starmindStatic.ts`: every dollar/GPU/
+  power figure carries a source URL, a `dealsLastUpdated` field tracks
+  freshness, and nothing here is estimated — these contracts land frequently
+  enough that this file will need hand updates as new ones are announced.
 - `kardashev.ts` — static content for the Scale tab: the three Kardashev
   stages' titles/descriptions and their power figures, each cited (Kardashev
   1964, restated by Britannica/Space.com) rather than invented, same
