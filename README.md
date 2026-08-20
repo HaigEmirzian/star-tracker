@@ -2,8 +2,10 @@
 
 A live tracker for SpaceX's space infrastructure: the **Starlink** broadband
 constellation and **Starmind**, SpaceX's orbital AI data center program built
-with Nvidia. A third **Scale** tab visualizes the Kardashev scale (planet →
-star → galaxy) as a scroll-driven zoom through two short videos.
+with Nvidia. A **Deals** tab tracks SpaceX's third-party AI compute contracts
+(Colossus data center leases), and a **Scale** tab visualizes the Kardashev
+scale (planet → star → galaxy) as a scroll-driven zoom through two short
+videos.
 
 ## Data sources
 
@@ -16,6 +18,9 @@ star → galaxy) as a scroll-driven zoom through two short videos.
   Starmind has no live telemetry yet; deployment metrics (satellites, power,
   compute) are intentionally shown as locked/pending until SpaceX discloses
   real numbers. Do not add fabricated figures to that file.
+- **AI compute deal terms** — manually maintained in `lib/data/dealsStatic.ts`
+  (Anthropic, Google, and Reflection AI Colossus leases, plus the Cursor
+  acquisition; no live API for these — update by hand as new deals land).
 - **Kardashev scale figures** — manually maintained in `lib/data/kardashev.ts`,
   citing Kardashev's original 1964 thresholds as restated by Britannica/
   Space.com. The Scale tab's videos/poster images live under `public/videos/`

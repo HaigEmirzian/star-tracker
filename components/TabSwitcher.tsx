@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import StarlinkPanel, { StarlinkPanelProps } from "@/components/tabs/StarlinkPanel";
 import StarmindPanel from "@/components/tabs/StarmindPanel";
 import ScalePanel from "@/components/tabs/ScalePanel";
+import DealsPanel from "@/components/tabs/DealsPanel";
 
-type Tab = "starlink" | "starmind" | "scale";
+type Tab = "starlink" | "starmind" | "scale" | "deals";
 
 const TABS = [
   { key: "starmind", label: "Starmind" },
   { key: "starlink", label: "Starlink" },
+  { key: "deals", label: "Deals" },
   { key: "scale", label: "Scale" },
 ] as const;
 
@@ -28,6 +30,7 @@ export default function TabSwitcher({ starlinkData }: { starlinkData: StarlinkPa
     starmind: null,
     starlink: null,
     scale: null,
+    deals: null,
   });
   const tablistRef = useRef<HTMLDivElement>(null);
 
@@ -121,6 +124,7 @@ export default function TabSwitcher({ starlinkData }: { starlinkData: StarlinkPa
       >
         {tab === "starmind" && <StarmindPanel />}
         {tab === "starlink" && <StarlinkPanel {...starlinkData} />}
+        {tab === "deals" && <DealsPanel />}
         {tab === "scale" && <ScalePanel />}
       </div>
     </div>
