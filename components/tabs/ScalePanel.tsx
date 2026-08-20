@@ -39,6 +39,41 @@ function stageTransform(index: number, active: number) {
   return { scale: SCALE_FUTURE, opacity: 0 };
 }
 
+// Soft edge fade so each image dissolves into the page instead of ending at
+// a visible boundary. All three sources are "bright subject on a black
+// field" and the page is pure black, so the subjects already blend — what
+// gave the frames away was the hard edge (originally a circular clip, then
+// the rectangle simply stopping). Earth and the Sun sit in empty space so
+// the fade never reaches them; the Milky Way panorama fills its frame edge
+// to edge, and is the reason this exists.
+//
+// Most of these images need no mask at all: they are a bright subject on a
+// pure black field, and the panel behind them is pure black, so the frame
+// edge is genuinely invisible. Earth and the Sun rely on exactly that. What
+// gave the original away was clipping the frame to a circle, not the
+// rectangle itself.
+//
+// The Milky Way panorama is the exception — it is a star field filling the
+// frame edge to edge, its background is dark grey rather than black, and its
+// rectangle reads clearly against the page. That one gets a fade.
+//
+// A single elliptical gradient, deliberately NOT two linear gradients
+// combined with `mask-composite`: the bottom mask layer composites against
+// an empty backdrop, so `intersect` resolves the whole mask to nothing and
+// the image disappears. (Adding `WebkitMaskComposite: "source-in"` as
+// vendor-prefixing makes it worse — it aliases the standard property and
+// wins.) One layer with no compositing has no such failure mode. It tracks
+// the real edges because the frame is built to the image's own aspect ratio.
+//
+// Also deliberately NOT baked into the images as transparency: deriving
+// alpha from luminance (the obvious trick for black-background astronomy
+// photos) turns Earth's night side and the Milky Way's own dust lanes
+// semi-transparent, because those are genuinely dark parts of the subject,
+// not background.
+const EDGE_FADE_MASK = {
+  maskImage: "radial-gradient(ellipse at center, #000 32%, transparent 72%)",
+} as const;
+
 /**
  * Thin white leader line running from near the body out to the caption,
  * plus the caption itself. Rendered per stage and only shown while that
@@ -137,9 +172,31 @@ export default function ScalePanel() {
     return () => mq.removeEventListener("change", onChange);
   }, []);
 
+  // This panel is a fixed, single-screen experience: one stage fills the
+  // viewport and the wheel drives stage changes rather than scrolling. Any
+  // page scroll left over (the footer, sub-pixel rounding) is just slack the
+  // user can drag into, which reads as a bug. Lock the document while this
+  // panel owns the screen, and restore on unmount / tab switch. The
+  // reduced-motion path returns early above and never reaches this, so that
+  // layout stays scrollable as it needs to be.
+  useEffect(() => {
+    if (reducedMotion) return;
+    const html = document.documentElement;
+    const prevHtml = html.style.overflow;
+    const prevBody = document.body.style.overflow;
+    html.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      html.style.overflow = prevHtml;
+      document.body.style.overflow = prevBody;
+    };
+  }, [reducedMotion]);
+
   // Returns true when the gesture was consumed (a stage change happened).
-  // Returning false at either end is deliberate: it lets the page scroll
-  // normally so the user is never trapped inside this panel.
+  // At either end it returns false and leaves the event alone — with the
+  // document locked there is nothing to scroll to, so this just avoids
+  // pointlessly calling preventDefault. Leaving the panel is always done via
+  // the tab bar, which stays visible above it.
   const advance = useCallback(
     (direction: 1 | -1) => {
       const now = Date.now();
@@ -218,12 +275,20 @@ export default function ScalePanel() {
       tabIndex={0}
       onKeyDown={onKeyDown}
       aria-label="Kardashev scale, scroll to zoom out between stages"
-      // Breaks out of <main>'s horizontal padding so the visual runs edge to
-      // edge. Only the *bottom* padding is cancelled (-mb-16) — cancelling
-      // the top too would pull the panel up over the tab bar. The height
-      // subtracts the tab bar + main's top padding so one stage fills what's
-      // left of the viewport without forcing page scroll.
-      className="relative left-1/2 -mb-16 h-[calc(100svh-10rem)] w-[100vw] -translate-x-1/2 overflow-hidden bg-black focus:outline-none"
+      // Fixed rather than in-flow: this is a single-screen visual, and any
+      // attempt to size it against <main>'s padding plus the footer leaves a
+      // sliver of page scroll (the earlier `calc(100svh - 10rem)` overshot by
+      // ~38px, which read as stray slack the user could drag into). Taking it
+      // out of flow means the panel is exactly the viewport by definition,
+      // and the flow content behind it collapses to well under one screen, so
+      // there is nothing to scroll. The tab bar is lifted to z-10 in
+      // TabSwitcher to stay above this.
+      //
+      // Solid black rather than letting the ambient Starfield through: these
+      // images are black-backed, so matching the page to that black is what
+      // makes their frames invisible. Showing stars behind them instead makes
+      // every rectangle edge legible again.
+      className="fixed inset-0 z-0 overflow-hidden bg-black focus:outline-none"
     >
       {/* Layered image stack — all stages occupy the same box; scale/opacity
           decide which one you're looking at. */}
@@ -241,15 +306,35 @@ export default function ScalePanel() {
               pointerEvents: i === active ? "auto" : "none",
             }}
           >
-            <div className="relative h-[min(78vmin,78vw)] w-[min(78vmin,78vw)] overflow-hidden rounded-full">
-              <Image
-                src={stage.imageUrl}
-                alt={stage.imageAlt}
-                fill
-                sizes="100vw"
-                priority={i === 0}
-                className="object-cover"
-              />
+            {/* The frame takes the image's own aspect ratio (minus any
+                cropped strip), so the edge-fade mask lands exactly on the
+                image's edges rather than on letterbox padding. Because the
+                frame matches, object-cover fits exactly and crops nothing.
+
+                overflow-hidden plus an over-tall inner box is what clips the
+                burned-in caption off sources that have one (see cropBottom):
+                the inner box is scaled up by 1/(1-crop) so the unwanted
+                strip falls outside the frame. */}
+            <div
+              className="relative w-[min(82vmin,82vw)] overflow-hidden"
+              style={{
+                aspectRatio: `${stage.aspect / (1 - (stage.cropBottom ?? 0))}`,
+                ...(stage.fadeEdges ? EDGE_FADE_MASK : null),
+              }}
+            >
+              <div
+                className="absolute inset-x-0 top-0"
+                style={{ height: `${100 / (1 - (stage.cropBottom ?? 0))}%` }}
+              >
+                <Image
+                  src={stage.imageUrl}
+                  alt={stage.imageAlt}
+                  fill
+                  sizes="100vw"
+                  priority={i === 0}
+                  className="object-cover object-top"
+                />
+              </div>
             </div>
           </div>
         );

@@ -24,6 +24,27 @@ export interface KardashevStage {
   /** Image representing this scale, hotlinked from a public/CC source. */
   imageUrl: string;
   imageAlt: string;
+  /**
+   * Fraction of the image's height to clip off the bottom, 0-1. Used where
+   * the source has burned-in text at the frame edge (SDO stamps the
+   * instrument and observation time onto its images). Clipping is done in
+   * CSS rather than by re-hosting a doctored copy, so the image stays the
+   * publisher's own file.
+   */
+  cropBottom?: number;
+  /**
+   * The source image's natural width / height. The frame is built to this
+   * ratio so the soft edge mask lands on the image's real edges instead of
+   * on letterbox padding.
+   */
+  aspect: number;
+  /**
+   * Feather the frame's edges. Only needed for images whose subject runs to
+   * the frame edge; one sitting on a black field already blends into the
+   * black page and is better left alone, since any fade would eat into the
+   * subject itself.
+   */
+  fadeEdges?: boolean;
   /** Attribution line — required for the ESO image (CC BY 4.0), and NASA
    *  asks to be acknowledged as the source even though its imagery isn't
    *  copyrighted. */
@@ -44,6 +65,7 @@ export const kardashevStages: KardashevStage[] = [
     imageUrl:
       "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57723/globe_east_2048.jpg",
     imageAlt: "Earth photographed as a full disk from space, the Blue Marble",
+    aspect: 2048 / 2048,
     imageCredit: "NASA",
     imageSourcePage: "https://visibleearth.nasa.gov/images/57723/the-blue-marble",
   },
@@ -63,6 +85,11 @@ export const kardashevStages: KardashevStage[] = [
     imageUrl: "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_2048_0171.jpg",
     imageAlt:
       "The Sun as a full disk in extreme ultraviolet, showing its corona and active regions",
+    // SDO burns "SDO/AIA 171 <date> UT" into the bottom of every frame. The
+    // disc ends around 92% of frame height, so clipping 8% removes the text
+    // without touching the corona.
+    cropBottom: 0.08,
+    aspect: 2048 / 2048,
     imageCredit: "NASA/SDO",
     imageSourcePage: "https://sdo.gsfc.nasa.gov/data/",
   },
@@ -78,6 +105,10 @@ export const kardashevStages: KardashevStage[] = [
     imageUrl: "https://cdn.eso.org/images/publicationjpg/eso0932a.jpg",
     imageAlt:
       "A 360-degree panorama of the Milky Way arching across the night sky",
+    aspect: 4000 / 2000,
+    // The only one that needs it: a star field running to all four edges,
+    // on a dark-grey rather than black background.
+    fadeEdges: true,
     imageCredit: "ESO/S. Brunier (CC BY 4.0)",
     imageSourcePage: "https://www.eso.org/public/images/eso0932a/",
   },
