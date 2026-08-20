@@ -1,6 +1,7 @@
-// Manually maintained, cited data for the Kardashev scale (Scale tab).
-// Same discipline as fccStatic.ts / starmindStatic.ts / gpuSpecs.ts: every
-// figure traces to a real published source, never interpolated or invented.
+// Manually maintained content for the Kardashev scale (Scale tab).
+// Same discipline as fccStatic.ts / starmindStatic.ts / gpuSpecs.ts for the
+// power figures below: every number traces to a real published source,
+// never interpolated or invented.
 //
 // The scale itself is Nikolai Kardashev's 1964 classification of a
 // civilization by how much energy it can harness. The power figures below
@@ -8,6 +9,12 @@
 // magnitude by nature (Kardashev defined them as rough thresholds, not
 // precise measurements), which is why each carries an `approximate` note
 // rather than being presented as an exact value.
+//
+// The imagery is a pair of cinematic zoom-out videos (in public/videos/,
+// see kardashevTransitionVideos below) rather than hotlinked photos —
+// several rounds of trying to make single still photos blend seamlessly
+// into the page background never fully worked, and the videos give an
+// actual continuous zoom instead of a crossfade illusion between stills.
 
 export interface KardashevStage {
   id: string;
@@ -21,35 +28,12 @@ export interface KardashevStage {
   powerLabel: string;
   powerSource: string;
   powerSourceLabel: string;
-  /** Image representing this scale, hotlinked from a public/CC source. */
-  imageUrl: string;
-  imageAlt: string;
   /**
-   * Fraction of the image's height to clip off the bottom, 0-1. Used where
-   * the source has burned-in text at the frame edge (SDO stamps the
-   * instrument and observation time onto its images). Clipping is done in
-   * CSS rather than by re-hosting a doctored copy, so the image stays the
-   * publisher's own file.
+   * Still frame shown before video playback starts (the <video>'s `poster`)
+   * and in the reduced-motion fallback, which never plays video at all.
    */
-  cropBottom?: number;
-  /**
-   * The source image's natural width / height. The frame is built to this
-   * ratio so the soft edge mask lands on the image's real edges instead of
-   * on letterbox padding.
-   */
-  aspect: number;
-  /**
-   * Feather the frame's edges. Only needed for images whose subject runs to
-   * the frame edge; one sitting on a black field already blends into the
-   * black page and is better left alone, since any fade would eat into the
-   * subject itself.
-   */
-  fadeEdges?: boolean;
-  /** Attribution line — required for the ESO image (CC BY 4.0), and NASA
-   *  asks to be acknowledged as the source even though its imagery isn't
-   *  copyrighted. */
-  imageCredit: string;
-  imageSourcePage: string;
+  posterUrl: string;
+  posterAlt: string;
 }
 
 export const kardashevStages: KardashevStage[] = [
@@ -62,12 +46,8 @@ export const kardashevStages: KardashevStage[] = [
     powerLabel: "~10¹⁶–10¹⁷ W",
     powerSource: "https://www.britannica.com/science/Kardashev-scale",
     powerSourceLabel: "Britannica — Kardashev scale",
-    imageUrl:
-      "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57723/globe_east_2048.jpg",
-    imageAlt: "Earth photographed as a full disk from space, the Blue Marble",
-    aspect: 2048 / 2048,
-    imageCredit: "NASA",
-    imageSourcePage: "https://visibleearth.nasa.gov/images/57723/the-blue-marble",
+    posterUrl: "/images/kardashev/type-i.jpg",
+    posterAlt: "Earth seen from space, the opening frame of the zoom-out sequence",
   },
   {
     id: "type-ii",
@@ -78,20 +58,8 @@ export const kardashevStages: KardashevStage[] = [
     powerLabel: "~4 × 10²⁶ W",
     powerSource: "https://www.britannica.com/science/Kardashev-scale",
     powerSourceLabel: "Britannica — Kardashev scale",
-    // SDO publishes a rolling "latest" full-disk image rather than a stable
-    // per-observation URL. Using it means this panel shows the actual Sun as
-    // observed within the last few hours — fitting for a project built
-    // around live data, at the cost of the exact frame not being fixed.
-    imageUrl: "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_2048_0171.jpg",
-    imageAlt:
-      "The Sun as a full disk in extreme ultraviolet, showing its corona and active regions",
-    // SDO burns "SDO/AIA 171 <date> UT" into the bottom of every frame. The
-    // disc ends around 92% of frame height, so clipping 8% removes the text
-    // without touching the corona.
-    cropBottom: 0.08,
-    aspect: 2048 / 2048,
-    imageCredit: "NASA/SDO",
-    imageSourcePage: "https://sdo.gsfc.nasa.gov/data/",
+    posterUrl: "/images/kardashev/type-ii.jpg",
+    posterAlt: "The Sun, its surface alive with flares, midway through the zoom-out sequence",
   },
   {
     id: "type-iii",
@@ -102,16 +70,18 @@ export const kardashevStages: KardashevStage[] = [
     powerLabel: "~4 × 10³⁷ W",
     powerSource: "https://www.britannica.com/science/Kardashev-scale",
     powerSourceLabel: "Britannica — Kardashev scale",
-    imageUrl: "https://cdn.eso.org/images/publicationjpg/eso0932a.jpg",
-    imageAlt:
-      "A 360-degree panorama of the Milky Way arching across the night sky",
-    aspect: 4000 / 2000,
-    // The only one that needs it: a star field running to all four edges,
-    // on a dark-grey rather than black background.
-    fadeEdges: true,
-    imageCredit: "ESO/S. Brunier (CC BY 4.0)",
-    imageSourcePage: "https://www.eso.org/public/images/eso0932a/",
+    posterUrl: "/images/kardashev/type-iii.jpg",
+    posterAlt: "A spiral galaxy, the closing frame of the zoom-out sequence",
   },
+];
+
+// One video per gap between stages: kardashevTransitionVideos[i] plays
+// between kardashevStages[i] and kardashevStages[i + 1] (forward) or the
+// reverse (backward). Each is a continuous zoom from one stage's framing to
+// the next's, so at rest either end of a video matches that stage's poster.
+export const kardashevTransitionVideos = [
+  "/videos/kardashev-type1-type2.mp4",
+  "/videos/kardashev-type2-type3.mp4",
 ];
 
 // Carl Sagan extended Kardashev's three discrete types into a continuous
@@ -124,4 +94,4 @@ export const humanityPosition = {
   sourceLabel: "Space.com — The Kardashev scale",
 };
 
-export const kardashevLastUpdated = "2026-08-19";
+export const kardashevLastUpdated = "2026-08-20";
