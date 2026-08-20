@@ -35,6 +35,24 @@ const nextConfig: NextConfig = {
         hostname: "iprsoftwaremedia.com",
         pathname: "/219/files/**",
       },
+      // Kardashev scale imagery (lib/data/kardashev.ts). NASA content isn't
+      // copyrighted (acknowledgment requested); the ESO Milky Way panorama
+      // is CC BY 4.0 (attribution required) — both are credited in the UI.
+      {
+        protocol: "https",
+        hostname: "eoimages.gsfc.nasa.gov",
+        pathname: "/images/**",
+      },
+      {
+        protocol: "https",
+        hostname: "sdo.gsfc.nasa.gov",
+        pathname: "/assets/img/**",
+      },
+      {
+        protocol: "https",
+        hostname: "cdn.eso.org",
+        pathname: "/images/**",
+      },
     ],
   },
   turbopack: {
