@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import StarlinkPanel, { StarlinkPanelProps } from "@/components/tabs/StarlinkPanel";
 import StarmindPanel from "@/components/tabs/StarmindPanel";
+import ScalePanel from "@/components/tabs/ScalePanel";
 
-type Tab = "starlink" | "starmind";
+type Tab = "starlink" | "starmind" | "scale";
 
 const TABS = [
   { key: "starmind", label: "Starmind" },
   { key: "starlink", label: "Starlink" },
+  { key: "scale", label: "Scale" },
 ] as const;
 
 function isTypingTarget(el: EventTarget | null) {
@@ -25,6 +27,7 @@ export default function TabSwitcher({ starlinkData }: { starlinkData: StarlinkPa
   const buttonRefs = useRef<Record<Tab, HTMLButtonElement | null>>({
     starmind: null,
     starlink: null,
+    scale: null,
   });
   const tablistRef = useRef<HTMLDivElement>(null);
 
@@ -77,7 +80,9 @@ export default function TabSwitcher({ starlinkData }: { starlinkData: StarlinkPa
 
   return (
     <div className="w-full">
-      <div className="mb-10 flex justify-center">
+      {/* z-10 keeps the tab bar above the Scale panel, which is fixed at z-0
+          so it can fill the viewport without leaving stray page scroll. */}
+      <div className="relative z-10 mb-10 flex justify-center">
         <div
           ref={tablistRef}
           role="tablist"
@@ -114,7 +119,9 @@ export default function TabSwitcher({ starlinkData }: { starlinkData: StarlinkPa
         id={`panel-${tab}`}
         aria-labelledby={`tab-${tab}`}
       >
-        {tab === "starmind" ? <StarmindPanel /> : <StarlinkPanel {...starlinkData} />}
+        {tab === "starmind" && <StarmindPanel />}
+        {tab === "starlink" && <StarlinkPanel {...starlinkData} />}
+        {tab === "scale" && <ScalePanel />}
       </div>
     </div>
   );

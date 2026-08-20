@@ -6,8 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A live tracker for SpaceX's space infrastructure: the **Starlink** broadband
 constellation and **Starmind**, SpaceX's orbital AI data center program (built
-with Nvidia). Single-page app with a Starmind/Starlink tab toggle over an
-animated starfield background — no routing, no database.
+with Nvidia), plus a **Scale** tab visualizing the Kardashev scale. Single-page
+app with a Starmind/Starlink/Scale tab toggle over an animated starfield
+background — no routing, no database.
 
 ## Commands
 
@@ -47,8 +48,11 @@ successful result instead of the page going blank).
 (`lib/data/*`) in parallel, then hands it as props into
 `components/TabSwitcher.tsx` — a Client Component that owns which tab is
 active. Because `TabSwitcher` imports `StarlinkPanel`/`StarmindPanel`/
-`StarlinkGrowthChart` directly (not via `children`), those are part of the
-client module graph too, even without their own `"use client"` directive.
+`StarlinkGrowthChart`/`ScalePanel` directly (not via `children`), those are
+part of the client module graph too, even without their own `"use client"`
+directive. `ScalePanel` is the exception to the props-from-the-server
+pattern — its content (`lib/data/kardashev.ts`) is static, so it needs no
+server fetch and takes no props.
 Anything in that tree that depends on wall-clock time (`Date.now()`) must
 compute it in a `useEffect` after mount, not during render — render also runs
 during SSR, and baking "now" into the server-rendered HTML causes a hydration
@@ -78,6 +82,11 @@ mismatch against the client's actual time (see the `useNow()` hook in
   Starmind has no live telemetry yet, so the UI intentionally renders its
   metrics grid as locked/pending (`StarmindPanel.tsx`) rather than showing a
   number.
+- `kardashev.ts` — static content for the Scale tab: the three Kardashev
+  stages' titles/descriptions and their power figures, each cited (Kardashev
+  1964, restated by Britannica/Space.com) rather than invented, same
+  discipline as `fccStatic.ts`/`starmindStatic.ts` above. The imagery isn't
+  here — see the Scale tab section below.
 
 **Styling:** Tailwind CSS v4, dark-only (space theme — black background,
 white text), no light-mode variant. `components/Starfield.tsx` is a
@@ -112,6 +121,41 @@ imports, which webpack 5 rejects with `UnhandledSchemeError` unless
 `IgnorePlugin` skips the chunk (see `next.config.ts`) — this is *why*
 `npm run build` runs webpack instead of Turbopack in the first place (see
 Commands section above).
+
+**Scale tab:** `components/tabs/ScalePanel.tsx` shows the Kardashev scale
+(planet → star → galaxy) as three stages connected by two short cinematic
+zoom videos (`public/videos/kardashev-type1-type2.mp4`,
+`-type2-type3.mp4`; poster stills in `public/images/kardashev/`). A wheel/
+touch/arrow-key gesture scrubs the relevant video instead of the page
+scrolling — this went through several failed approaches (still photos
+crossfading via CSS transform/mask/vignette never blended cleanly into the
+black background at every zoom level) before landing on real video. Two
+things here are easy to break if touched carelessly:
+- **Forward vs. backward playback.** Moving deeper into the scale just
+  calls `.play()` (sped up via `playbackRate` to hit `TRANSITION_MS`
+  regardless of the source clip's real length) and advances the stage on
+  `ended`. Moving back has no native equivalent — browsers don't support
+  negative `playbackRate` — so it manually walks `currentTime` backwards
+  instead. That walk is paced off the video's own `seeked` event (with a
+  short fallback timeout in case a seek lands on an already-current
+  position and never fires one), not a plain `requestAnimationFrame` loop
+  blindly reassigning `currentTime` every frame — the latter queues a new
+  seek before the decoder finishes the last one and was the direct cause of
+  a visible stutter on longer backward scrubs (e.g. Type III → Type I,
+  chaining two scrubs). Keep this event-gated if touching `scrubVideo`.
+- **The panel is `fixed inset-0`, not sized against `<main>`'s padding.**
+  An earlier version tried `h-[calc(100svh-10rem)]` and consistently left
+  ~38px of real, draggable page scroll below the panel — sizing a full-bleed
+  section against a hand-computed padding/footer height doesn't stay exact.
+  Taking it out of flow entirely removes the possibility. `TabSwitcher.tsx`
+  lifts the tab bar to `z-10` so it stays above this panel's `z-0`, and
+  `ScalePanel` locks `document.documentElement`/`body` `overflow: hidden`
+  in a `useEffect` while mounted (skipped under reduced motion, since that
+  path stays in-flow and scrollable on purpose).
+
+Reduced motion (`prefers-reduced-motion`, read in JS the same way
+`Starfield.tsx` does) renders static stacked sections instead — no video,
+no scroll-hijacking.
 
 **Accessibility:** The tab toggle (`TabSwitcher.tsx`) implements the ARIA
 "tablist" pattern with roving `tabindex` (only the active tab is a Tab stop;
