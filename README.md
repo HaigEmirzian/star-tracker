@@ -2,7 +2,8 @@
 
 A live tracker for SpaceX's space infrastructure: the **Starlink** broadband
 constellation and **Starmind**, SpaceX's orbital AI data center program built
-with Nvidia.
+with Nvidia. A third **Scale** tab visualizes the Kardashev scale (planet →
+star → galaxy) as a scroll-driven zoom through two short videos.
 
 ## Data sources
 
@@ -15,8 +16,12 @@ with Nvidia.
   Starmind has no live telemetry yet; deployment metrics (satellites, power,
   compute) are intentionally shown as locked/pending until SpaceX discloses
   real numbers. Do not add fabricated figures to that file.
+- **Kardashev scale figures** — manually maintained in `lib/data/kardashev.ts`,
+  citing Kardashev's original 1964 thresholds as restated by Britannica/
+  Space.com. The Scale tab's videos/poster images live under `public/videos/`
+  and `public/images/kardashev/` rather than in this data file.
 
-Neither of the "manual" files should ever contain invented numbers — only
+None of the "manual" files should ever contain invented numbers — only
 publicly confirmed facts, with a `lastUpdated` date.
 
 ## Getting started
