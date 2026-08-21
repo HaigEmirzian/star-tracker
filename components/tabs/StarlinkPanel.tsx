@@ -45,6 +45,18 @@ function formatDate(iso: string) {
   });
 }
 
+// Unlike formatDate above, this formats a full timestamp (e.g. fetchedAt) —
+// it must render in the viewer's local timezone, not UTC, or "Live ·
+// updated" can show tomorrow's date while the viewer's clock still reads
+// today (UTC runs ahead of US timezones).
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 function formatCountdown(netIso: string, nowMs: number): string {
   const diffMs = new Date(netIso).getTime() - nowMs;
   if (diffMs <= 0) return "In progress";
@@ -128,7 +140,13 @@ export default function StarlinkPanel({
         <StatCard
           label="Active satellites"
           value={summary ? summary.totalActive.toLocaleString() : "—"}
-          sub={summary ? `Live · updated ${formatDate(summary.fetchedAt)}` : "Live data warming up"}
+          sub={
+            summary
+              ? now !== null
+                ? `Live · updated ${formatDateTime(summary.fetchedAt)}`
+                : "Live"
+              : "Live data warming up"
+          }
         />
         <StatCard
           label="Deploying in upcoming launches"
