@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Starmind / Starlink Tracker",
+  title: "Starmind & Starlink Tracker",
   description:
     "Tracking SpaceX's Starlink constellation and the Starmind orbital AI data center program.",
 };
