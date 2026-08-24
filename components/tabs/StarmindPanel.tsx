@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 import { starmind } from "@/lib/data/starmindStatic";
 import type { CitedFigure } from "@/lib/data/gpuSpecs";
 import GpuSpecComparison from "@/components/tabs/GpuSpecComparison";
@@ -57,6 +58,30 @@ export default function StarmindPanel() {
       <p className="max-w-xl text-balance text-lg text-white/60">
         {starmind.description}
       </p>
+
+      <figure className="w-full">
+        <div className="relative aspect-[2/1] w-full overflow-hidden rounded-2xl border border-white/10">
+          <Image
+            src="/images/starmind/ai1-satellite-render.jpg"
+            alt={`Render of SpaceX's ${starmind.prototype.name} Starmind satellite in orbit`}
+            fill
+            className="object-cover"
+            sizes="(min-width: 768px) 768px, 100vw"
+            priority
+          />
+        </div>
+        <figcaption className="mt-2 text-xs text-white/30">
+          {starmind.prototype.name} satellite render, via Nvidia/SpaceXAI —{" "}
+          <a
+            href="https://x.com/SawyerMerritt/status/2091911938947035434"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline decoration-white/20 hover:text-white/50"
+          >
+            source
+          </a>
+        </figcaption>
+      </figure>
 
       <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
         <LockedStat label="Satellites deployed" />
