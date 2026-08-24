@@ -4,8 +4,8 @@ import type { CitedFigure, CpuSpec, GpuSpec } from "@/lib/data/gpuSpecs";
 import { cpuSpecs, gpuSpecs } from "@/lib/data/gpuSpecs";
 
 // Inline placeholder shown when Nvidia hasn't published a stable, hotlinkable
-// product image for a part (Rubin/Vera currently only exist as keynote-slide
-// renders) — a simple schematic chip icon, never a fake or guessed photo.
+// product image for a part — a simple schematic chip icon, never a fake or
+// guessed photo.
 function ChipPlaceholder({ label }: { label: string }) {
   return (
     <div
@@ -38,42 +38,15 @@ function ChipPlaceholder({ label }: { label: string }) {
   );
 }
 
-function GpuImage({ gpu }: { gpu: GpuSpec }) {
-  if (!gpu.imageUrl) {
-    return <ChipPlaceholder label={gpu.name} />;
-  }
-  return (
-    <div>
-      <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black/40">
-        <Image
-          src={gpu.imageUrl}
-          alt={gpu.imageCaption ?? gpu.name}
-          fill
-          sizes="(min-width: 640px) 33vw, 100vw"
-          className="object-contain"
-        />
-      </div>
-      <a
-        href={gpu.imageSourcePage}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-1 block text-xs text-white/30 underline decoration-white/20 hover:text-white/50"
-      >
-        {gpu.imageCaption ?? "Photo: Nvidia"}
-      </a>
-    </div>
-  );
-}
-
 // Renders a cited figure like the app's existing LockedStat pattern
 // (StarmindPanel.tsx) when the value is missing: a dim em dash plus a small
 // "Not yet published" caption — never a guessed number.
-function FigureCell({
+function FigureCell<T>({
   figure,
   format,
 }: {
-  figure?: CitedFigure<number>;
-  format: (v: number) => string;
+  figure?: CitedFigure<T>;
+  format: (v: T) => string;
 }) {
   if (!figure) {
     return (
@@ -88,71 +61,100 @@ function FigureCell({
 
 const numberFmt = (v: number) => v.toLocaleString();
 
-const specRows: {
-  label: string;
-  render: (gpu: GpuSpec) => ReactNode;
-}[] = [
-  {
-    label: "TDP",
-    render: (gpu) => (
-      <FigureCell figure={gpu.tdpWatts} format={(v) => `${numberFmt(v)} W`} />
-    ),
-  },
-  {
-    label: "Memory",
-    render: (gpu) => (
-      <FigureCell
-        figure={gpu.memoryCapacityGB}
-        format={(v) => `${numberFmt(v)} GB`}
-      />
-    ),
-  },
-  {
-    label: "Memory bandwidth",
-    render: (gpu) => (
-      <FigureCell
-        figure={gpu.memoryBandwidthTBs}
-        format={(v) => `${v} TB/s`}
-      />
-    ),
-  },
-  {
-    label: "FP16 Tensor Core",
-    render: (gpu) => (
-      <FigureCell
-        figure={gpu.flops.fp16}
-        format={(v) => `${numberFmt(v)} TFLOPS`}
-      />
-    ),
-  },
-  {
-    label: "FP8 Tensor Core",
-    render: (gpu) => (
-      <FigureCell
-        figure={gpu.flops.fp8}
-        format={(v) => `${numberFmt(v)} TFLOPS`}
-      />
-    ),
-  },
-  {
-    label: "FP4 Tensor Core",
-    render: (gpu) => (
-      <FigureCell
-        figure={gpu.flops.fp4}
-        format={(v) => `${numberFmt(v)} TFLOPS`}
-      />
-    ),
-  },
-  {
-    label: "Interconnect bandwidth",
-    render: (gpu) => (
-      <FigureCell
-        figure={gpu.interconnectBandwidthGBs}
-        format={(v) => `${numberFmt(v)} GB/s`}
-      />
-    ),
-  },
-];
+// Shared card shell used for both Rubin (GPU) and Vera (CPU) so the two read
+// as one matched pair, not a table plus a bolted-on card.
+function HardwareCard({
+  kicker,
+  name,
+  meta,
+  description,
+  rows,
+  imageUrl,
+  imageCaption,
+  imageSourcePage,
+}: {
+  kicker: string;
+  name: string;
+  meta?: string;
+  description: string;
+  rows: { label: string; value: ReactNode }[];
+  imageUrl?: string;
+  imageCaption?: string;
+  imageSourcePage: string;
+}) {
+  return (
+    <div className="w-full rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-sm">
+      <div className="mb-3 w-full">
+        {imageUrl ? (
+          <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black/40">
+            <Image
+              src={imageUrl}
+              alt={imageCaption ?? name}
+              fill
+              sizes="(min-width: 640px) 50vw, 100vw"
+              className="object-contain"
+            />
+          </div>
+        ) : (
+          <ChipPlaceholder label={name} />
+        )}
+      </div>
+      <div className="text-xs uppercase tracking-wide text-white/40">{kicker}</div>
+      <div className="mt-1 font-semibold text-white">{name}</div>
+      {meta && <div className="mt-1 text-xs text-white/40">{meta}</div>}
+      <div className="mt-2 text-sm text-white/50">{description}</div>
+      <dl className="mt-3 flex flex-col gap-1 text-sm">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-center justify-between">
+            <dt className="text-white/40">{row.label}</dt>
+            <dd>{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <a
+        href={imageSourcePage}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-3 inline-block text-xs text-white/30 underline decoration-white/20 hover:text-white/50"
+      >
+        {imageCaption ?? "Source: Nvidia"}
+      </a>
+    </div>
+  );
+}
+
+function gpuRows(gpu: GpuSpec): { label: string; value: ReactNode }[] {
+  return [
+    { label: "TDP", value: <FigureCell figure={gpu.tdpWatts} format={(v) => `${numberFmt(v)} W`} /> },
+    { label: "Memory", value: <FigureCell figure={gpu.memoryCapacityGB} format={(v) => `${numberFmt(v)} GB`} /> },
+    { label: "Memory bandwidth", value: <FigureCell figure={gpu.memoryBandwidthTBs} format={(v) => `${v} TB/s`} /> },
+    { label: "FP4 Tensor Core", value: <FigureCell figure={gpu.flops.fp4} format={(v) => `${numberFmt(v)} TFLOPS`} /> },
+    { label: "Interconnect bandwidth", value: <FigureCell figure={gpu.interconnectBandwidthGBs} format={(v) => `${numberFmt(v)} GB/s`} /> },
+    { label: "Transistors", value: <FigureCell figure={gpu.transistorCountBillion} format={(v) => `${v}B`} /> },
+    { label: "Streaming Multiprocessors", value: <FigureCell figure={gpu.smCount} format={numberFmt} /> },
+    { label: "Tensor Cores", value: <FigureCell figure={gpu.tensorCoreCount} format={numberFmt} /> },
+  ];
+}
+
+function cpuRows(cpu: CpuSpec): { label: string; value: ReactNode }[] {
+  return [
+    { label: "Cores", value: <FigureCell figure={cpu.cores} format={numberFmt} /> },
+    { label: "Threads", value: <FigureCell figure={cpu.threads} format={numberFmt} /> },
+    {
+      label: "TDP",
+      value: (
+        <FigureCell
+          figure={cpu.tdpWattsRange}
+          format={([lo, hi]) => `${lo}-${hi} W`}
+        />
+      ),
+    },
+    { label: "L3 cache", value: <FigureCell figure={cpu.l3CacheMB} format={(v) => `${v} MB`} /> },
+    { label: "Memory", value: <FigureCell figure={cpu.memoryCapacityTB} format={(v) => `${v} TB`} /> },
+    { label: "Memory bandwidth", value: <FigureCell figure={cpu.memoryBandwidthTBs} format={(v) => `${v} TB/s`} /> },
+    { label: "NVLink-C2C to GPU", value: <FigureCell figure={cpu.nvlinkC2CBandwidthTBs} format={(v) => `${v} TB/s`} /> },
+  ];
+}
 
 function collectFootnotes(gpus: GpuSpec[], cpus: CpuSpec[]) {
   const seen = new Map<string, { label: string; source: string }>();
@@ -164,14 +166,20 @@ function collectFootnotes(gpus: GpuSpec[], cpus: CpuSpec[]) {
     add(gpu.tdpWatts);
     add(gpu.memoryCapacityGB);
     add(gpu.memoryBandwidthTBs);
-    add(gpu.flops.fp16);
-    add(gpu.flops.fp8);
     add(gpu.flops.fp4);
     add(gpu.interconnectBandwidthGBs);
+    add(gpu.transistorCountBillion);
+    add(gpu.smCount);
+    add(gpu.tensorCoreCount);
   }
   for (const cpu of cpus) {
     add(cpu.cores);
-    add(cpu.tdpWatts);
+    add(cpu.threads);
+    add(cpu.tdpWattsRange);
+    add(cpu.l3CacheMB);
+    add(cpu.memoryCapacityTB);
+    add(cpu.memoryBandwidthTBs);
+    add(cpu.nvlinkC2CBandwidthTBs);
   }
   return Array.from(seen.values());
 }
@@ -185,125 +193,34 @@ export default function GpuSpecComparison() {
         Compute hardware specs
       </div>
 
-      {/* Desktop / tablet: real comparison table */}
-      <div className="hidden overflow-x-auto rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm sm:block">
-        <table className="w-full min-w-[560px] border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-white/10">
-              <th className="w-40 p-4 text-left font-normal text-white/40">
-                &nbsp;
-              </th>
-              {gpuSpecs.map((gpu) => (
-                <th key={gpu.id} className="p-4 text-left align-top">
-                  <div className="mb-3 w-40">
-                    <GpuImage gpu={gpu} />
-                  </div>
-                  <div className="font-semibold text-white">{gpu.name}</div>
-                  <div className="mt-1 text-xs text-white/40">
-                    {gpu.generation} · {gpu.status}
-                  </div>
-                  <div className="mt-1 text-xs text-white/30">
-                    {gpu.relationToStarmind}
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {specRows.map((row) => (
-              <tr key={row.label} className="border-b border-white/5 last:border-0">
-                <td className="p-4 text-white/40">{row.label}</td>
-                {gpuSpecs.map((gpu) => (
-                  <td key={gpu.id} className="p-4">
-                    {row.render(gpu)}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile: stacked per-GPU cards to avoid horizontal scroll */}
-      <div className="flex flex-col gap-4 sm:hidden">
+      {/* Rubin (GPU) on the left, Vera (companion CPU) on the right — same
+          card shell for both so they read as a matched pair. */}
+      <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
         {gpuSpecs.map((gpu) => (
-          <div
+          <HardwareCard
             key={gpu.id}
-            className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm"
-          >
-            <div className="mb-3">
-              <GpuImage gpu={gpu} />
-            </div>
-            <div className="font-semibold text-white">{gpu.name}</div>
-            <div className="mt-1 text-xs text-white/40">
-              {gpu.generation} · {gpu.status}
-            </div>
-            <div className="mt-1 text-xs text-white/30">
-              {gpu.relationToStarmind}
-            </div>
-            <dl className="mt-4 flex flex-col gap-2 text-sm">
-              {specRows.map((row) => (
-                <div key={row.label} className="flex items-center justify-between">
-                  <dt className="text-white/40">{row.label}</dt>
-                  <dd>{row.render(gpu)}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
+            kicker={`${gpu.generation} · ${gpu.status}`}
+            name={gpu.name}
+            description={gpu.relationToStarmind}
+            rows={gpuRows(gpu)}
+            imageUrl={gpu.imageUrl}
+            imageCaption={gpu.imageCaption}
+            imageSourcePage={gpu.imageSourcePage}
+          />
+        ))}
+        {cpuSpecs.map((cpu) => (
+          <HardwareCard
+            key={cpu.id}
+            kicker="Companion CPU"
+            name={cpu.name}
+            description={cpu.role}
+            rows={cpuRows(cpu)}
+            imageUrl={cpu.imageUrl}
+            imageCaption={cpu.imageCaption}
+            imageSourcePage={cpu.imageSourcePage}
+          />
         ))}
       </div>
-
-      {/* Vera: standalone companion-CPU card, deliberately separate from the
-          GPU/FLOPS table above — it is not a GPU. */}
-      {cpuSpecs.map((cpu) => (
-        <div
-          key={cpu.id}
-          className="w-full max-w-sm rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-sm"
-        >
-          <div className="mb-3 w-full">
-            {cpu.imageUrl ? (
-              <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black/40">
-                <Image
-                  src={cpu.imageUrl}
-                  alt={cpu.imageCaption ?? cpu.name}
-                  fill
-                  sizes="(min-width: 640px) 24rem, 100vw"
-                  className="object-contain"
-                />
-              </div>
-            ) : (
-              <ChipPlaceholder label={cpu.name} />
-            )}
-          </div>
-          <div className="text-xs uppercase tracking-wide text-white/40">
-            Companion CPU
-          </div>
-          <div className="mt-1 font-semibold text-white">{cpu.name}</div>
-          <div className="mt-2 text-sm text-white/50">{cpu.role}</div>
-          <dl className="mt-3 flex flex-col gap-1 text-sm">
-            <div className="flex items-center justify-between">
-              <dt className="text-white/40">Cores</dt>
-              <dd>
-                <FigureCell figure={cpu.cores} format={numberFmt} />
-              </dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-white/40">TDP</dt>
-              <dd>
-                <FigureCell figure={cpu.tdpWatts} format={(v) => `${numberFmt(v)} W`} />
-              </dd>
-            </div>
-          </dl>
-          <a
-            href={cpu.imageSourcePage}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 inline-block text-xs text-white/30 underline decoration-white/20 hover:text-white/50"
-          >
-            {cpu.imageCaption ?? "Source: Nvidia"}
-          </a>
-        </div>
-      ))}
 
       <ul className="flex flex-col gap-1 text-xs text-white/30">
         {footnotes.map((fn) => (

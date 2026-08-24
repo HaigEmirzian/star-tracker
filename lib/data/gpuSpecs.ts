@@ -53,6 +53,9 @@ export interface GpuSpec {
     fp4?: CitedFigure<number>;
   };
   interconnectBandwidthGBs?: CitedFigure<number>;
+  transistorCountBillion?: CitedFigure<number>;
+  smCount?: CitedFigure<number>;
+  tensorCoreCount?: CitedFigure<number>;
   lastUpdated: string;
 }
 
@@ -68,16 +71,29 @@ export const gpuSpecs: GpuSpec[] = [
       "https://iprsoftwaremedia.com/219/files/202603/69b832203d63321ac974de07_nvidia-vera-rubin-family/nvidia-vera-rubin-family_mid.jpg",
     imageCaption: "Vera Rubin compute tray (Nvidia has not photographed a standalone Rubin GPU)",
     imageSourcePage: "https://nvidianews.nvidia.com/news/nvidia-vera-rubin-platform",
-    // Nvidia has not published per-GPU TDP, memory capacity, or memory
-    // bandwidth for the standalone Rubin GPU as of this writing — those
-    // figures are disclosed only at the Vera Rubin NVL72 rack level. Left
-    // undefined rather than derived/estimated.
+    // Nvidia has not published a per-GPU TDP figure for Rubin as of this
+    // writing (only system-level power, e.g. ~24kW for a full DGX Rubin
+    // NVL8 tray) — left undefined rather than using unconfirmed third-party
+    // leak numbers. Same for FP16/FP8 Tensor Core throughput: Nvidia has
+    // only published NVFP4 figures for Rubin so far.
+    memoryCapacityGB: {
+      value: 288,
+      source: "https://developer.nvidia.com/blog/inside-nvidia-rubin-gpu-architecture-powering-the-era-of-agentic-ai/",
+      sourceLabel: "Nvidia Developer Blog — Inside NVIDIA Rubin GPU Architecture",
+      note: "Up to 288 GB of HBM4 memory per GPU",
+    },
+    memoryBandwidthTBs: {
+      value: 22,
+      source: "https://developer.nvidia.com/blog/inside-nvidia-rubin-gpu-architecture-powering-the-era-of-agentic-ai/",
+      sourceLabel: "Nvidia Developer Blog — Inside NVIDIA Rubin GPU Architecture",
+      note: "Up to 22 TB/s of peak HBM4 bandwidth per GPU",
+    },
     flops: {
       fp4: {
         value: 50_000,
         source: "https://nvidianews.nvidia.com/news/rubin-platform-ai-supercomputer",
         sourceLabel: "Nvidia Newsroom — Rubin platform announcement",
-        note: "50 petaflops of NVFP4 compute for AI inference, as stated by Nvidia",
+        note: "50 petaflops of NVFP4 compute for AI inference (35 petaflops for training), as stated by Nvidia",
       },
     },
     interconnectBandwidthGBs: {
@@ -86,7 +102,25 @@ export const gpuSpecs: GpuSpec[] = [
       sourceLabel: "Nvidia Newsroom — Rubin platform announcement",
       note: "Per-GPU NVLink bandwidth (\"each GPU offers 3.6TB/s of bandwidth\"); the Vera Rubin NVL72 rack aggregates to 260TB/s",
     },
-    lastUpdated: "2026-08-19",
+    transistorCountBillion: {
+      value: 336,
+      source: "https://developer.nvidia.com/blog/inside-nvidia-rubin-gpu-architecture-powering-the-era-of-agentic-ai/",
+      sourceLabel: "Nvidia Developer Blog — Inside NVIDIA Rubin GPU Architecture",
+      note: "336-billion-transistor multi-chip module design",
+    },
+    smCount: {
+      value: 224,
+      source: "https://developer.nvidia.com/blog/inside-nvidia-rubin-gpu-architecture-powering-the-era-of-agentic-ai/",
+      sourceLabel: "Nvidia Developer Blog — Inside NVIDIA Rubin GPU Architecture",
+      note: "224 Streaming Multiprocessors (SMs)",
+    },
+    tensorCoreCount: {
+      value: 896,
+      source: "https://developer.nvidia.com/blog/inside-nvidia-rubin-gpu-architecture-powering-the-era-of-agentic-ai/",
+      sourceLabel: "Nvidia Developer Blog — Inside NVIDIA Rubin GPU Architecture",
+      note: "896 Tensor Cores with expanded precision",
+    },
+    lastUpdated: "2026-08-24",
   },
 ];
 
@@ -94,7 +128,14 @@ export interface CpuSpec {
   id: string;
   name: string;
   cores?: CitedFigure<number>;
-  tdpWatts?: CitedFigure<number>;
+  threads?: CitedFigure<number>;
+  // A range, not a single number: Nvidia publishes Vera's TDP as a
+  // configurable window rather than one fixed figure.
+  tdpWattsRange?: CitedFigure<[number, number]>;
+  memoryCapacityTB?: CitedFigure<number>;
+  memoryBandwidthTBs?: CitedFigure<number>;
+  nvlinkC2CBandwidthTBs?: CitedFigure<number>;
+  l3CacheMB?: CitedFigure<number>;
   role: string;
   imageUrl?: string;
   // See GpuSpec.imageCaption — same reasoning applies here.
@@ -111,14 +152,48 @@ export const cpuSpecs: CpuSpec[] = [
       value: 88,
       source: "https://www.nvidia.com/en-us/data-center/vera-cpu/",
       sourceLabel: "Nvidia Vera CPU product page",
-      note: "88 custom Arm \"Olympus\" cores, 176 threads",
+      note: "88 custom Arm \"Olympus\" cores",
     },
-    // Nvidia has not published a TDP figure for Vera. Left undefined.
+    threads: {
+      value: 176,
+      source: "https://www.nvidia.com/en-us/data-center/vera-cpu/",
+      sourceLabel: "Nvidia Vera CPU product page",
+      note: "176 threads with partitioned core resources",
+    },
+    tdpWattsRange: {
+      value: [250, 450],
+      source: "https://developer.nvidia.com/blog/nvidia-vera-cpu-sets-a-new-standard-for-agentic-workloads-in-ai-factories/",
+      sourceLabel: "Nvidia Developer Blog — Vera CPU for agentic workloads",
+      note: "Configurable 250W–450W TDP range",
+    },
+    l3CacheMB: {
+      value: 164,
+      source: "https://developer.nvidia.com/blog/inside-the-nvidia-rubin-platform-six-new-chips-one-ai-supercomputer/",
+      sourceLabel: "Nvidia Developer Blog — Inside the NVIDIA Rubin Platform",
+      note: "164 MB unified L3 cache",
+    },
+    memoryCapacityTB: {
+      value: 1.5,
+      source: "https://www.nvidia.com/en-us/data-center/vera-cpu/",
+      sourceLabel: "Nvidia Vera CPU product page",
+      note: "Up to 1.5 TB of LPDDR5X memory",
+    },
+    memoryBandwidthTBs: {
+      value: 1.2,
+      source: "https://www.nvidia.com/en-us/data-center/vera-cpu/",
+      sourceLabel: "Nvidia Vera CPU product page",
+      note: "Up to 1.2 TB/s of LPDDR5X memory bandwidth",
+    },
+    nvlinkC2CBandwidthTBs: {
+      value: 1.8,
+      source: "https://www.nvidia.com/en-us/data-center/vera-cpu/",
+      sourceLabel: "Nvidia Vera CPU product page",
+      note: "Up to 1.8 TB/s of coherent NVLink-C2C bandwidth to Rubin GPUs",
+    },
     role: "Arm companion CPU in the Vera Rubin platform — not a GPU, and Nvidia has not published FLOPS figures for it. Handles agentic AI/RL orchestration, tool execution, and data pipelines alongside Rubin GPUs.",
-    imageUrl:
-      "https://iprsoftwaremedia.com/219/files/202603/69b83bf73d6332289074debc_vera-cpu-rack/vera-cpu-rack_mid.png",
-    imageCaption: "Vera CPU rack (Nvidia has not photographed a standalone Vera CPU module)",
-    imageSourcePage: "https://nvidianews.nvidia.com/news/nvidia-vera-rubin-platform",
-    lastUpdated: "2026-08-19",
+    imageUrl: "/images/starmind/vera-cpu-die.jpg",
+    imageCaption: "Vera CPU die shot (Nvidia, via Sawyer Merritt)",
+    imageSourcePage: "https://x.com/SawyerMerritt/status/2091911938947035434",
+    lastUpdated: "2026-08-24",
   },
 ];
