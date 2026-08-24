@@ -79,7 +79,7 @@ export default function StarlinkGlobe({ entries }: { entries: StarlinkGpEntry[] 
       // satellite is a free-floating dot at altitude, which is what the
       // particles layer is built for.
       globeInstance = new Globe(containerRef.current!)
-        .globeImageUrl("/textures/earth-dark.jpg")
+        .globeImageUrl("/textures/earth-blue-marble.jpg")
         .backgroundColor("rgba(0,0,0,0)")
         .showAtmosphere(true)
         .atmosphereColor("#3987e5")
