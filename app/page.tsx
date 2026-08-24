@@ -16,7 +16,7 @@ export default async function Home() {
   return (
     <div className="relative flex min-h-screen flex-col">
       <Starfield />
-      <main className="flex flex-1 flex-col px-6 py-16 sm:px-12">
+      <main className="flex flex-1 flex-col px-6 pt-8 pb-16 sm:px-12 sm:pt-10">
         <TabSwitcher
           starlinkData={{
             summary: starlinkData?.summary ?? null,

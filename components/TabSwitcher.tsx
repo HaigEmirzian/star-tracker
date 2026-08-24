@@ -85,7 +85,7 @@ export default function TabSwitcher({ starlinkData }: { starlinkData: StarlinkPa
     <div className="w-full">
       {/* z-10 keeps the tab bar above the Scale panel, which is fixed at z-0
           so it can fill the viewport without leaving stray page scroll. */}
-      <div className="relative z-10 mb-10 flex justify-center">
+      <div className="relative z-10 mb-6 flex justify-center">
         <div
           ref={tablistRef}
           role="tablist"
