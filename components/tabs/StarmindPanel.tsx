@@ -60,7 +60,7 @@ export default function StarmindPanel() {
       </p>
 
       <figure className="w-full">
-        <div className="relative aspect-[2/1] max-h-[34dvh] w-full overflow-hidden rounded-2xl border border-white/10">
+        <div className="relative aspect-[2/1] max-h-[40dvh] w-full overflow-hidden rounded-2xl border border-white/10">
           <Image
             src="/images/starmind/ai1-satellite-render.jpg"
             alt={`Render of SpaceX's ${starmind.prototype.name} Starmind satellite in orbit`}
