@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
 import { starmind } from "@/lib/data/starmindStatic";
-import type { CitedFigure } from "@/lib/data/gpuSpecs";
 import GpuSpecComparison from "@/components/tabs/GpuSpecComparison";
 import CapabilityTranslator from "@/components/tabs/CapabilityTranslator";
 
@@ -36,14 +35,6 @@ function FactCard({ title, rows }: { title: string; rows: { label: string; value
 
 const numberFmt = (v: number) => v.toLocaleString();
 
-function collectFootnotes(figures: CitedFigure<unknown>[]) {
-  const seen = new Map<string, { label: string; source: string }>();
-  for (const fig of figures) {
-    seen.set(fig.source, { label: fig.sourceLabel, source: fig.source });
-  }
-  return Array.from(seen.values());
-}
-
 export default function StarmindPanel() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col items-center gap-8 text-center">
@@ -59,29 +50,16 @@ export default function StarmindPanel() {
         {starmind.description}
       </p>
 
-      <figure className="w-full">
-        <div className="relative aspect-[2/1] max-h-[40dvh] w-full overflow-hidden rounded-2xl border border-white/10">
-          <Image
-            src="/images/starmind/ai1-satellite-render.jpg"
-            alt={`Render of SpaceX's ${starmind.prototype.name} Starmind satellite in orbit`}
-            fill
-            className="object-cover"
-            sizes="(min-width: 768px) 768px, 100vw"
-            priority
-          />
-        </div>
-        <figcaption className="mt-2 text-xs text-white/30">
-          {starmind.prototype.name} satellite render, via Nvidia/SpaceXAI —{" "}
-          <a
-            href="https://x.com/SawyerMerritt/status/2091911938947035434"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline decoration-white/20 hover:text-white/50"
-          >
-            source
-          </a>
-        </figcaption>
-      </figure>
+      <div className="relative aspect-[2/1] max-h-[40dvh] w-full overflow-hidden rounded-2xl border border-white/10">
+        <Image
+          src="/images/starmind/ai1-satellite-render.jpg"
+          alt={`Render of SpaceX's ${starmind.prototype.name} Starmind satellite in orbit`}
+          fill
+          className="object-cover"
+          sizes="(min-width: 768px) 768px, 100vw"
+          priority
+        />
+      </div>
 
       <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
         <LockedStat label="Satellites deployed" />
@@ -171,33 +149,6 @@ export default function StarmindPanel() {
             ]}
           />
         </div>
-
-        <ul className="flex flex-col gap-1 text-xs text-white/30">
-          {collectFootnotes([
-            starmind.factory.sizeSqFt,
-            starmind.factory.computeTargetGwPerYear,
-            starmind.satelliteSpecs.heightM,
-            starmind.satelliteSpecs.wingspanM,
-            starmind.satelliteSpecs.orbitAltitudeKm,
-            starmind.satelliteSpecs.avgPowerKw,
-            starmind.satelliteSpecs.peakPowerKw,
-            starmind.satelliteSpecs.solarArrayKw,
-            starmind.satelliteSpecs.radiatorAreaM2,
-            starmind.perSatelliteHardware.rubinGpuCount,
-            starmind.perSatelliteHardware.veraCpuCount,
-          ]).map((fn) => (
-            <li key={fn.source}>
-              <a
-                href={fn.source}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline decoration-white/20 hover:text-white/50"
-              >
-                {fn.label}
-              </a>
-            </li>
-          ))}
-        </ul>
       </div>
 
       <GpuSpecComparison />
@@ -205,12 +156,6 @@ export default function StarmindPanel() {
       <div className="w-full">
         <CapabilityTranslator />
       </div>
-
-      <p className="text-xs text-white/30">
-        Partnership with {starmind.partner} announced {starmind.partnershipAnnounced} ·
-        Program confirmed {starmind.confirmedDate} · Data last updated{" "}
-        {starmind.lastUpdated}
-      </p>
     </div>
   );
 }

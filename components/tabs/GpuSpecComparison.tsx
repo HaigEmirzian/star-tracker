@@ -71,7 +71,6 @@ function HardwareCard({
   rows,
   imageUrl,
   imageCaption,
-  imageSourcePage,
 }: {
   kicker: string;
   name: string;
@@ -80,7 +79,6 @@ function HardwareCard({
   rows: { label: string; value: ReactNode }[];
   imageUrl?: string;
   imageCaption?: string;
-  imageSourcePage: string;
 }) {
   return (
     <div className="w-full rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-sm">
@@ -111,14 +109,6 @@ function HardwareCard({
           </div>
         ))}
       </dl>
-      <a
-        href={imageSourcePage}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-3 inline-block text-xs text-white/30 underline decoration-white/20 hover:text-white/50"
-      >
-        {imageCaption ?? "Source: Nvidia"}
-      </a>
     </div>
   );
 }
@@ -156,37 +146,7 @@ function cpuRows(cpu: CpuSpec): { label: string; value: ReactNode }[] {
   ];
 }
 
-function collectFootnotes(gpus: GpuSpec[], cpus: CpuSpec[]) {
-  const seen = new Map<string, { label: string; source: string }>();
-  const add = (fig?: CitedFigure<unknown>) => {
-    if (!fig) return;
-    seen.set(fig.source, { label: fig.sourceLabel, source: fig.source });
-  };
-  for (const gpu of gpus) {
-    add(gpu.tdpWatts);
-    add(gpu.memoryCapacityGB);
-    add(gpu.memoryBandwidthTBs);
-    add(gpu.flops.fp4);
-    add(gpu.interconnectBandwidthGBs);
-    add(gpu.transistorCountBillion);
-    add(gpu.smCount);
-    add(gpu.tensorCoreCount);
-  }
-  for (const cpu of cpus) {
-    add(cpu.cores);
-    add(cpu.threads);
-    add(cpu.tdpWattsRange);
-    add(cpu.l3CacheMB);
-    add(cpu.memoryCapacityTB);
-    add(cpu.memoryBandwidthTBs);
-    add(cpu.nvlinkC2CBandwidthTBs);
-  }
-  return Array.from(seen.values());
-}
-
 export default function GpuSpecComparison() {
-  const footnotes = collectFootnotes(gpuSpecs, cpuSpecs);
-
   return (
     <div className="flex w-full flex-col gap-4 text-left">
       <div className="text-sm uppercase tracking-wide text-white/50">
@@ -205,7 +165,6 @@ export default function GpuSpecComparison() {
             rows={gpuRows(gpu)}
             imageUrl={gpu.imageUrl}
             imageCaption={gpu.imageCaption}
-            imageSourcePage={gpu.imageSourcePage}
           />
         ))}
         {cpuSpecs.map((cpu) => (
@@ -217,33 +176,9 @@ export default function GpuSpecComparison() {
             rows={cpuRows(cpu)}
             imageUrl={cpu.imageUrl}
             imageCaption={cpu.imageCaption}
-            imageSourcePage={cpu.imageSourcePage}
           />
         ))}
       </div>
-
-      <ul className="flex flex-col gap-1 text-xs text-white/30">
-        {footnotes.map((fn) => (
-          <li key={fn.source}>
-            <a
-              href={fn.source}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline decoration-white/20 hover:text-white/50"
-            >
-              {fn.label}
-            </a>
-          </li>
-        ))}
-      </ul>
-
-      <p className="text-xs text-white/30">
-        Data last updated{" "}
-        {[...gpuSpecs, ...cpuSpecs]
-          .map((s) => s.lastUpdated)
-          .sort()
-          .at(-1)}
-      </p>
     </div>
   );
 }

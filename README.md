@@ -37,6 +37,12 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+### Feature flags
+
+Some work is merged but not yet public. Set `NEXT_PUBLIC_FUTURE_FEATURES=1`
+(env var or `.env.local`) to enable in-progress features — currently the Tesla
+Robotaxi tracker and its SpaceX/Tesla site toggle. Off by default.
+
 ## Notes
 
 - No database — all data is fetched server-side and cached via Next.js ISR
