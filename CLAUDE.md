@@ -11,6 +11,18 @@ contracts (Colossus data center leases) and a **Scale** tab visualizing the
 Kardashev scale. Single-page app with a Starmind/Starlink/Deals/Scale tab
 toggle over an animated starfield background — no routing, no database.
 
+A separate top-right **Site toggle** (logo-only, SpaceX vs Tesla) switches the
+whole tab set: SpaceX is the tracker described above; Tesla currently has one
+tab, **Robotaxi**, tracking Tesla's driverless ride-hailing rollout.
+
+**The entire Tesla side is gated behind `futureFeaturesEnabled`**
+(`lib/flags.ts`, driven by the `NEXT_PUBLIC_FUTURE_FEATURES` env var). When
+it's off — the default, including on the deployed site — the site toggle is
+hidden and only the SpaceX tracker renders; `page.tsx` also skips the NHTSA
+fetch. The Tesla code still ships to `main` so it can be reviewed and iterated
+on in the open. Set `NEXT_PUBLIC_FUTURE_FEATURES=1` locally (or in Vercel
+project settings) to work on it.
+
 ## Commands
 
 ```bash
@@ -46,15 +58,21 @@ rather than returning null/empty, and Next.js will keep serving the last
 successful result instead of the page going blank).
 
 **Data flow:** `app/page.tsx` is a Server Component that fetches everything
-(`lib/data/*`) in parallel, then hands it as props into
-`components/TabSwitcher.tsx` — a Client Component that owns which tab is
-active. Because `TabSwitcher` imports `StarlinkPanel`/`StarmindPanel`/
-`StarlinkGrowthChart`/`DealsPanel`/`ScalePanel` directly (not via
-`children`), those are part of the client module graph too, even without
-their own `"use client"` directive. `DealsPanel` and `ScalePanel` are the
-exceptions to the props-from-the-server pattern — their content
-(`lib/data/dealsStatic.ts`, `lib/data/kardashev.ts`) is static, so neither
-needs a server fetch or takes props.
+(`lib/data/*`, for BOTH sites — the server has no notion of which site the
+client will show) in parallel, then hands it as props into
+`components/SiteSwitcher.tsx` — a Client Component that owns which *site*
+(SpaceX vs Tesla) is active, and renders either `TabSwitcher` (SpaceX) or
+`TeslaTabSwitcher` (Tesla) accordingly, passing each its slice of props.
+`TabSwitcher` in turn owns which SpaceX *tab* is active. Because `TabSwitcher`
+imports `StarlinkPanel`/`StarmindPanel`/`StarlinkGrowthChart`/`DealsPanel`/
+`ScalePanel` directly (not via `children`), those are part of the client
+module graph too, even without their own `"use client"` directive — same for
+`TeslaTabSwitcher` importing `RobotaxiPanel`. `DealsPanel`, `ScalePanel`, and
+`RobotaxiPanel`'s static-facts portion are exceptions to the
+props-from-the-server pattern — `lib/data/dealsStatic.ts`,
+`lib/data/kardashev.ts`, and `lib/data/robotaxiStatic.ts` are static and
+imported directly by their panels; only `RobotaxiPanel`'s live NHTSA data
+comes in as a prop from `page.tsx`, the same way Starlink data does.
 Anything in that tree that depends on wall-clock time (`Date.now()`) must
 compute it in a `useEffect` after mount, not during render — render also runs
 during SSR, and baking "now" into the server-rendered HTML causes a hydration
@@ -96,6 +114,32 @@ mismatch against the client's actual time (see the `useNow()` hook in
   1964, restated by Britannica/Space.com) rather than invented, same
   discipline as `fccStatic.ts`/`starmindStatic.ts` above. The imagery isn't
   here — see the Scale tab section below.
+- `nhtsaRobotaxi.ts` — the one genuinely **live** data source on the Tesla
+  side, following the exact same disk-cache-guard/in-memory-coalescing
+  pattern as `celestrak.ts`. Fetches NHTSA's Standing General Order (SGO)
+  2021-01 crash-reporting CSV (no auth/key required), which every company
+  testing/deploying SAE Level 3+ automated driving systems on public roads
+  must report to. Filters rows where `Reporting Entity === "Tesla, Inc."` —
+  confirmed against a real downloaded copy of the dataset that this cleanly
+  isolates Tesla's robotaxi program (all rows are Model Y in Austin/Dallas/
+  Houston, TX) from consumer FSD, which reports under a **separate** file
+  (`SGO-2021-01_Incident_Reports_ADAS.csv`, Level 2 driver-assist) not fetched
+  here — do not conflate the two datasets. NHTSA republishes the ADS CSV
+  roughly monthly, hence the 24h revalidate window. Never ship the raw
+  multi-MB CSV to the client — parse and filter server-side only, same
+  reasoning as the Starlink Data-Cache size limit above.
+- `robotaxiStatic.ts` — manually maintained, cited data for everything Tesla
+  only discloses quarterly or that's otherwise slow-changing (cumulative
+  miles, per-city launch/status, FSD build version, notable sightings). Same
+  discipline as `dealsStatic.ts`/`starmindStatic.ts`: every figure needs a
+  real source URL, update `robotaxiLastUpdated` by hand as new figures land.
+  Ride counts, fares, per-ride revenue, exact live fleet size, and
+  disengagement rate are **not publicly disclosed** by Tesla and have no
+  credible third-party measurement — `notDisclosed` lists these explicitly
+  rather than the UI guessing at them. `notableSightings` is a small
+  hand-curated highlight list (not a live per-vehicle registry — that would
+  need a database and a scraping pipeline this project deliberately doesn't
+  run).
 
 **Styling:** Tailwind CSS v4, dark-only (space theme — black background,
 white text), no light-mode variant. `components/Starfield.tsx` is a
