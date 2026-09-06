@@ -29,11 +29,13 @@ function primaryTag(tags: NewsTag[]): NewsTag | null {
   return tags[0] ?? null;
 }
 
+// Borderless: this renders inside a RobotaxiSection, which already supplies
+// the card chrome and the "News" heading. Height stays fixed so the dashboard
+// grid doesn't reflow as items come and go.
 function Shell({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
   return (
-    <div className="flex h-[26rem] flex-col overflow-hidden rounded-lg border border-white/10 bg-white/[0.04] backdrop-blur-sm">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-3 py-2">
-        <h2 className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/45">News</h2>
+    <div className="flex h-[24rem] flex-col overflow-hidden rounded-md border border-white/10 bg-black/20">
+      <div className="flex shrink-0 items-center justify-end gap-3 border-b border-white/10 px-3 py-1.5">
         {right}
       </div>
       {children}

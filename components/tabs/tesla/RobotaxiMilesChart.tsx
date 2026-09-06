@@ -29,9 +29,10 @@ export default function RobotaxiMilesChart() {
   return (
     <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-3 backdrop-blur-sm">
       <SectionLabel right={`${changePct > 0 ? "+" : ""}${changePct}% QoQ`}>
-        Paid robotaxi miles per quarter
+        Paid robotaxi miles
       </SectionLabel>
-      <div className="h-40 w-full min-w-0">
+      {/* 108px matches the sibling charts in this row so the three line up. */}
+      <div className="h-[108px] w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 16, right: 4, bottom: 0, left: 0 }}>
             <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.08)" strokeDasharray="0" />

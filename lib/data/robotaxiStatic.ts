@@ -327,6 +327,31 @@ export const fsdCumulativeMiles: CitedFigure<number> = {
   note: "Cumulative FSD miles driven globally — consumer FSD (Level 2 supervised), a far larger and separate population from the robotaxi fleet's autonomous miles.",
 };
 
+// Inputs for the ticking FSD odometer in the UI. Tesla runs a live counter on
+// its own FSD page; we cannot read that, so the UI projects forward from the
+// last disclosed total at Tesla's own stated rate.
+//
+// BOTH VALUES BELOW ARE DISCLOSED. The projection built from them is not, and
+// the component that renders it says so on screen: it is an extrapolation
+// between quarterly disclosures, not a live feed, and it must never be
+// presented as a measured figure or written back into this file as one.
+export const fsdMilesAnchor = {
+  miles: {
+    value: 12_000_000_000,
+    source: "https://evwire.com/p/tesla-q2-2026-earnings-results",
+    sourceLabel: "EVWire — Tesla Q2 2026 earnings recap",
+    note: "Cumulative FSD miles as of the close of Q2 2026.",
+  } as CitedFigure<number>,
+  /** The instant the anchor figure describes — Q2 2026 close. */
+  asOfIso: "2026-06-30T00:00:00Z",
+  milesPerDay: {
+    value: 20_400_000,
+    source: "https://electrek.co/2026/05/03/tesla-fsd-10-billion-miles-no-magical-milestone-autonomy/",
+    sourceLabel: "Electrek — Tesla reaches 10 billion FSD miles",
+    note: "Tesla-stated Q1 2026 average of more than 20.4 million FSD miles per day, an all-time high at the time (~13,000 miles per minute). The real rate has almost certainly moved since.",
+  } as CitedFigure<number>,
+};
+
 // Robotaxi and FSD revenue are not broken out. This is the nearest disclosed
 // line item, and the UI must label it as a container, never as robotaxi
 // revenue — see notDisclosed below.

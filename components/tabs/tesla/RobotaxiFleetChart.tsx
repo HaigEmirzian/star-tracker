@@ -1,91 +1,113 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import type { TxdmvFleetData } from "@/lib/data/txdmvFleetTypes";
 import { texasFleetObservations } from "@/lib/data/robotaxiStatic";
-import { num, SectionLabel } from "@/components/tabs/tesla/robotaxiUi";
+import { num } from "@/components/tabs/tesla/robotaxiUi";
 
-// Categorical slots 1 and 2 (blue, orange) — validated together against this
-// panel's #08090c backdrop: CVD ΔE 26.8, normal-vision ΔE 31.8, both well
-// clear of the floors. Stacked segments carry a 2px surface gap.
-const MODEL_Y = "#3987e5";
-const CYBERCAB = "#d95926";
-const GAP = "#08090c";
+// Texas registered-fleet growth, from the live TxDMV series when it is
+// available and the two hand-cited observations when it is not.
+//
+// Only official registration counts belong on this series. The crowdsourced
+// "vehicles seen running unsupervised" tally is a different measure and is
+// rendered as its own metric — never as a point here.
+const SERIES = "#3987e5";
 
-export default function RobotaxiFleetChart() {
-  // Only TxDMV registration observations belong on this series. The
-  // crowdsourced "vehicles seen running unsupervised" count is a different
-  // measure and is rendered as its own metric, never as a point here.
-  const data = texasFleetObservations.map((o) => ({
-    date: o.date,
-    modelY: o.modelY ?? 0,
-    cybercab: o.cybercab ?? 0,
-    total: o.total.value,
-  }));
+function TooltipContent({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: { value?: number }[];
+  label?: string | number;
+}) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-white/15 bg-black/90 px-3 py-2 text-xs shadow-lg backdrop-blur-sm">
+      <div className="text-white/50">{label}</div>
+      <div className="font-mono font-semibold tabular-nums text-white">
+        {num(payload[0].value ?? 0)} registered
+      </div>
+    </div>
+  );
+}
+
+export default function RobotaxiFleetChart({ fleet }: { fleet: TxdmvFleetData | null }) {
+  const live = fleet?.history ?? [];
+  const isLive = live.length >= 2;
+
+  const data = isLive
+    ? live.map((p) => ({ label: p.label, count: p.count }))
+    : texasFleetObservations.map((o) => ({ label: o.date, count: o.total.value }));
 
   if (data.length < 2) return null;
 
+  const first = data[0];
+  const last = data[data.length - 1];
+
   return (
     <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-3 backdrop-blur-sm">
-      <SectionLabel right={`${data.length} observations`}>Texas registered fleet (TxDMV)</SectionLabel>
-      {/* min-w-0 — see the note in RobotaxiMilesChart.tsx. */}
-      <div className="h-40 w-full min-w-0">
+      <div className="mb-1 flex items-baseline justify-between gap-3">
+        <h3 className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/45">
+          TX registered fleet
+        </h3>
+        {fleet?.tesla ? (
+          <span className="font-mono text-[11px] tabular-nums text-emerald-300/80">
+            +{fleet.tesla.growth30dPct.toFixed(1)}% / 30d
+          </span>
+        ) : (
+          <span className="text-[10px] uppercase tracking-wider text-white/25">
+            {data.length} observations
+          </span>
+        )}
+      </div>
+
+      {/* min-w-0 — Recharts' measured SVG is otherwise an unshrinkable floor. */}
+      <div className="h-[108px] w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 16, right: 4, bottom: 0, left: 0 }}>
-            <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.08)" strokeDasharray="0" />
-            <XAxis
-              dataKey="date"
-              tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }}
-              tickLine={false}
-              axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
-            />
+          <AreaChart data={data} margin={{ top: 6, right: 4, bottom: 0, left: 0 }}>
+            <defs>
+              <linearGradient id="rtFleetFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={SERIES} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={SERIES} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.07)" strokeDasharray="0" />
+            <XAxis dataKey="label" hide />
             <YAxis
-              tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }}
+              tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }}
               tickLine={false}
               axisLine={false}
-              width={40}
+              width={34}
             />
-            <Bar
-              dataKey="modelY"
-              stackId="fleet"
-              fill={MODEL_Y}
-              stroke={GAP}
+            <Tooltip content={<TooltipContent />} cursor={{ stroke: "rgba(255,255,255,0.2)" }} />
+            <Area
+              type="monotone"
+              dataKey="count"
+              stroke={SERIES}
               strokeWidth={2}
+              fill="url(#rtFleetFill)"
+              dot={false}
               isAnimationActive={false}
-              maxBarSize={64}
+              activeDot={{ r: 3.5, fill: SERIES, stroke: "#08090c", strokeWidth: 2 }}
             />
-            <Bar
-              dataKey="cybercab"
-              stackId="fleet"
-              fill={CYBERCAB}
-              stroke={GAP}
-              strokeWidth={2}
-              radius={[4, 4, 0, 0]}
-              isAnimationActive={false}
-              maxBarSize={64}
-            >
-              <LabelList
-                dataKey="total"
-                position="top"
-                offset={6}
-                fill="rgba(255,255,255,0.75)"
-                fontSize={11}
-                formatter={(v) => (typeof v === "number" ? num(v) : "")}
-              />
-            </Bar>
-          </BarChart>
+          </AreaChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-2 flex items-center gap-4 text-[10px] text-white/45">
-        <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-sm" style={{ background: MODEL_Y }} /> Model Y
+
+      <div className="mt-1 flex justify-between font-mono text-[10px] tabular-nums text-white/30">
+        <span>
+          {first.label} · {num(first.count)}
         </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-sm" style={{ background: CYBERCAB }} /> Cybercab
+        <span>
+          {last.label} · {num(last.count)}
         </span>
       </div>
-      <p className="mt-1.5 text-[11px] leading-snug text-white/35">
-        Two official observations three months apart, not interpolated. Registrations, not vehicles in
-        service — Tesla does not disclose how many are actually carrying passengers.
+      <p className="mt-1 text-[10px] leading-snug text-white/25">
+        {isLive
+          ? "Live from the Texas DMV autonomous-vehicle registry. Registrations, not vehicles in service."
+          : "Two cited observations, not interpolated. Registrations, not vehicles in service."}
       </p>
     </div>
   );
