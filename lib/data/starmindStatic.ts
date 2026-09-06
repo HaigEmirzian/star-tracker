@@ -14,7 +14,7 @@ import type { CitedFigure } from "@/lib/data/gpuSpecs";
 // here, only the latest confirmed figure is shown, with no mention of the
 // superseded one.
 export const starmind = {
-  lastUpdated: "2026-08-19",
+  lastUpdated: "2026-09-06",
   status: "PRE-DEPLOYMENT" as const,
   confirmedDate: "2026-06-24",
   partner: "Nvidia",
@@ -102,6 +102,22 @@ export const starmind = {
       sourceLabel: "Notebookcheck, citing SpaceX's Starmind site",
       note: "Liquid radiators, redundant pumped loops, with micrometeoroid/debris shielding — rejects heat into vacuum since there's no convection in orbit",
     } as CitedFigure<number>,
+  },
+  deployment: {
+    orbitalLaunchTarget: {
+      value: "Q4 2027",
+      source:
+        "https://www.lightreading.com/satellite/with-nvidia-on-board-spacex-orbital-data-centers-to-hit-significant-scale-in-2028",
+      sourceLabel: "Light Reading — orbital data centers to hit 'significant scale' in 2028",
+      note: "Musk, Aug 2026: the space-optimized Vera Rubin NVL72 system is designed for launch to orbit in Q4 2027 — distinct from the AI1 prototype test targeted for early 2027",
+    } as CitedFigure<string>,
+    significantScaleYear: {
+      value: "2028",
+      source:
+        "https://www.lightreading.com/satellite/with-nvidia-on-board-spacex-orbital-data-centers-to-hit-significant-scale-in-2028",
+      sourceLabel: "Light Reading — orbital data centers to hit 'significant scale' in 2028",
+      note: "SpaceX/Nvidia expect the orbital data center constellation to reach significant scale in 2028; SpaceX's May 2026 S-1 framed deployment as 'as early as 2028'",
+    } as CitedFigure<string>,
   },
   perSatelliteHardware: {
     rubinGpuCount: {

@@ -75,8 +75,16 @@ export default function StarmindPanel() {
           <FactCard
             title={`Prototype: ${starmind.prototype.name}`}
             rows={[
-              { label: "Target launch", value: starmind.prototype.targetLaunch },
+              { label: "Prototype test", value: starmind.prototype.targetLaunch },
               { label: "Mass production", value: starmind.prototype.massProductionStart },
+              {
+                label: "Orbital launch",
+                value: starmind.deployment.orbitalLaunchTarget.value,
+              },
+              {
+                label: "Significant scale",
+                value: starmind.deployment.significantScaleYear.value,
+              },
               {
                 label: "Per Starship launch",
                 value: `${starmind.prototype.satellitesPerStarshipMission} satellites`,
