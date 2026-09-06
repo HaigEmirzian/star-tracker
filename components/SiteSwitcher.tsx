@@ -7,17 +7,19 @@ import TeslaTabSwitcher from "@/components/TeslaTabSwitcher";
 import Starfield from "@/components/Starfield";
 import TeslaBackdrop from "@/components/TeslaBackdrop";
 import type { StarlinkPanelProps } from "@/components/tabs/StarlinkPanel";
-import type { RobotaxiIncidentData } from "@/lib/data/nhtsaRobotaxi";
+import type { RobotaxiPanelProps } from "@/components/tabs/tesla/RobotaxiPanel";
 import { futureFeaturesEnabled } from "@/lib/flags";
 
 type Site = "spacex" | "tesla";
 
 export interface SiteSwitcherProps {
   starlinkData: StarlinkPanelProps;
-  robotaxiIncidents: RobotaxiIncidentData | null;
+  // Bundled the same way `starlinkData` is, so adding another live Tesla
+  // source stays a one-file diff rather than a four-file prop-drill.
+  robotaxiData: RobotaxiPanelProps;
 }
 
-export default function SiteSwitcher({ starlinkData, robotaxiIncidents }: SiteSwitcherProps) {
+export default function SiteSwitcher({ starlinkData, robotaxiData }: SiteSwitcherProps) {
   const [site, setSite] = useState<Site>("spacex");
 
   // The Tesla side is gated behind `futureFeaturesEnabled` — when it's off, the
@@ -64,7 +66,7 @@ export default function SiteSwitcher({ starlinkData, robotaxiIncidents }: SiteSw
         {activeSite === "spacex" ? (
           <TabSwitcher starlinkData={starlinkData} />
         ) : (
-          <TeslaTabSwitcher incidents={robotaxiIncidents} />
+          <TeslaTabSwitcher robotaxiData={robotaxiData} />
         )}
       </div>
 

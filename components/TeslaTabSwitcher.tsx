@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import RobotaxiPanel from "@/components/tabs/tesla/RobotaxiPanel";
-import type { RobotaxiIncidentData } from "@/lib/data/nhtsaRobotaxi";
+import RobotaxiPanel, { type RobotaxiPanelProps } from "@/components/tabs/tesla/RobotaxiPanel";
 
 // Only one tab today ("robotaxi") — kept as a union type and the same
 // ARIA-tablist shape as TabSwitcher.tsx so adding a second Tesla tab later
@@ -17,10 +16,10 @@ function isTypingTarget(el: EventTarget | null) {
 }
 
 export interface TeslaTabSwitcherProps {
-  incidents: RobotaxiIncidentData | null;
+  robotaxiData: RobotaxiPanelProps;
 }
 
-export default function TeslaTabSwitcher({ incidents }: TeslaTabSwitcherProps) {
+export default function TeslaTabSwitcher({ robotaxiData }: TeslaTabSwitcherProps) {
   const [tab, setTab] = useState<Tab>("robotaxi");
   const buttonRefs = useRef<Record<Tab, HTMLButtonElement | null>>({ robotaxi: null });
   const tablistRef = useRef<HTMLDivElement>(null);
@@ -101,7 +100,7 @@ export default function TeslaTabSwitcher({ incidents }: TeslaTabSwitcherProps) {
       </div>
 
       <div role="tabpanel" id={`tesla-panel-${tab}`} aria-labelledby={`tesla-tab-${tab}`}>
-        {tab === "robotaxi" && <RobotaxiPanel incidents={incidents} />}
+        {tab === "robotaxi" && <RobotaxiPanel {...robotaxiData} />}
       </div>
     </div>
   );

@@ -5,16 +5,18 @@ import {
   getUpcomingStarlinkLaunches,
 } from "@/lib/data/launchLibrary";
 import { getRobotaxiIncidentData } from "@/lib/data/nhtsaRobotaxi";
+import { getRobotaxiNews } from "@/lib/data/robotaxiNews";
 import { futureFeaturesEnabled } from "@/lib/flags";
 
 export default async function Home() {
-  const [starlinkData, upcomingLaunches, recentLaunches, robotaxiIncidents] =
+  const [starlinkData, upcomingLaunches, recentLaunches, robotaxiIncidents, robotaxiNews] =
     await Promise.all([
       getStarlinkData(),
       getUpcomingStarlinkLaunches(),
       getRecentStarlinkLaunches(),
-      // Tesla side is flag-gated — skip the NHTSA fetch entirely when it's off.
+      // Tesla side is flag-gated — skip both Tesla fetches entirely when it's off.
       futureFeaturesEnabled ? getRobotaxiIncidentData() : Promise.resolve(null),
+      futureFeaturesEnabled ? getRobotaxiNews() : Promise.resolve(null),
     ]);
 
   return (
@@ -27,7 +29,7 @@ export default async function Home() {
             upcomingLaunches,
             recentLaunches,
           }}
-          robotaxiIncidents={robotaxiIncidents}
+          robotaxiData={{ incidents: robotaxiIncidents, news: robotaxiNews }}
         />
       </main>
     </div>

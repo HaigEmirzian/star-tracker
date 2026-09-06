@@ -1,134 +1,222 @@
 import {
-  robotaxiCities,
-  notableSightings,
   cumulativeMiles,
   cumulativeUnsupervisedMiles,
-  texasFleetCount,
+  cybercab,
+  cybercabFleetCount,
+  deferredRevenue,
+  fsdAttachRate,
+  fsdBuildVersion,
+  fsdCumulativeMiles,
+  fsdSubscriptions,
+  notDisclosed,
+  observedUnsupervisedVehicles,
+  quarterlyPaidMiles,
+  regulatoryActions,
+  robotaxiCities,
   robotaxiLastUpdated,
-  type RobotaxiCityStatus,
+  servicesAndOtherRevenue,
+  texasFleetCount,
+  texasFleetObservations,
+  trainingCompute,
 } from "@/lib/data/robotaxiStatic";
-import type { RobotaxiIncidentData } from "@/lib/data/nhtsaRobotaxi";
+import type { CitedFigure } from "@/lib/data/gpuSpecs";
+import type { RobotaxiIncidentData } from "@/lib/data/nhtsaRobotaxiTypes";
+import type { RobotaxiNewsData } from "@/lib/data/robotaxiNewsTypes";
+import { collectFootnotes } from "@/lib/citations";
+import { compact, num, usd, Card, Metric, SectionLabel } from "@/components/tabs/tesla/robotaxiUi";
+import RobotaxiCityTable from "@/components/tabs/tesla/RobotaxiCityTable";
+import RobotaxiFleetChart from "@/components/tabs/tesla/RobotaxiFleetChart";
+import RobotaxiIncidentTable from "@/components/tabs/tesla/RobotaxiIncidentTable";
+import RobotaxiMilesChart from "@/components/tabs/tesla/RobotaxiMilesChart";
+import RobotaxiNewsFeed from "@/components/tabs/tesla/RobotaxiNewsFeed";
+import RobotaxiRevenueModel from "@/components/tabs/tesla/RobotaxiRevenueModel";
+import RobotaxiSafetyPanel from "@/components/tabs/tesla/RobotaxiSafetyPanel";
 
-const numberFmt = (v: number) => v.toLocaleString();
-
-function RollupStat({ label, value, note }: { label: string; value: string; note?: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
-      <div className="text-sm uppercase tracking-wide text-white/50">{label}</div>
-      <div className="mt-2 text-3xl font-semibold text-white">{value}</div>
-      {note && <div className="mt-1 text-xs text-white/40">{note}</div>}
-    </div>
-  );
-}
-
-const STATUS_LABEL: Record<RobotaxiCityStatus["status"], string> = {
-  driverless: "Driverless",
-  "safety-driver": "Safety driver",
-  announced: "Announced",
-};
-
-const STATUS_STYLE: Record<RobotaxiCityStatus["status"], string> = {
-  driverless: "border-emerald-300/30 bg-emerald-300/10 text-emerald-200",
-  "safety-driver": "border-amber-300/30 bg-amber-300/10 text-amber-200",
-  announced: "border-white/20 bg-white/10 text-white/60",
-};
-
-function CityCard({ city }: { city: RobotaxiCityStatus }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
-      <div className="mb-3 flex items-start justify-between gap-4">
-        <div>
-          <div className="text-lg font-semibold text-white">{city.city}</div>
-          <div className="text-xs uppercase tracking-wide text-white/40">{city.state}</div>
-        </div>
-        <span className={`shrink-0 rounded-full border px-3 py-1 text-xs uppercase tracking-wide ${STATUS_STYLE[city.status]}`}>
-          {STATUS_LABEL[city.status]}
-        </span>
-      </div>
-
-      <dl className="flex flex-col gap-2 text-sm">
-        <div className="flex justify-between gap-4">
-          <dt className="text-white/40">Launched</dt>
-          <dd className="text-right text-white">{city.launchDate?.value ?? "Not yet launched"}</dd>
-        </div>
-      </dl>
-
-      <p className="mt-4 text-sm text-white/50">{city.notes}</p>
-    </div>
-  );
-}
-
-export default function RobotaxiPanel({
-  incidents,
-}: {
+export interface RobotaxiPanelProps {
   incidents: RobotaxiIncidentData | null;
-}) {
+  news: RobotaxiNewsData | null;
+}
+
+// Every figure in the KPI strip below is something Tesla or a regulator
+// actually stated. Modelled numbers live only in RobotaxiRevenueModel, in
+// their own visual register — see lib/citations.ts for where that line sits.
+export default function RobotaxiPanel({ incidents, news }: RobotaxiPanelProps) {
+  const driverlessCities = robotaxiCities.filter((c) => c.status === "driverless").length;
+  const unsupervisedShare = Math.round(
+    (cumulativeUnsupervisedMiles.value / cumulativeMiles.value) * 100,
+  );
+
+  // Arithmetic over two disclosed figures is a normal metric; both sources
+  // stay in the footnotes below.
+  const latestQuarter = quarterlyPaidMiles[quarterlyPaidMiles.length - 1];
+
+  const citedFigures: CitedFigure<unknown>[] = [
+    ...robotaxiCities.flatMap((c) => (c.launchDate ? [c.launchDate] : [])),
+    ...texasFleetObservations.map((o) => o.total),
+    ...quarterlyPaidMiles.map((q) => q.paidMiles),
+    cumulativeMiles,
+    cumulativeUnsupervisedMiles,
+    cybercabFleetCount,
+    observedUnsupervisedVehicles,
+    cybercab.productionStart,
+    cybercab.installedAnnualCapacity,
+    cybercab.publicLaunch,
+    cybercab.configuration,
+    fsdBuildVersion,
+    fsdSubscriptions,
+    fsdAttachRate,
+    fsdCumulativeMiles,
+    servicesAndOtherRevenue,
+    deferredRevenue,
+    trainingCompute.cortex1Mw,
+    trainingCompute.cortex2Mw,
+  ];
+  const footnotes = collectFootnotes(citedFigures);
+
   return (
-    <div className="mx-auto flex max-w-3xl flex-col items-center gap-8 text-center">
-      <h1 className="text-5xl font-semibold tracking-tight text-white sm:text-6xl">Robotaxi</h1>
-      <p className="max-w-xl text-balance text-lg text-white/60">
-        Tesla&apos;s driverless ride-hailing rollout — tracked from Tesla&apos;s own quarterly
-        disclosures, public reporting, and live NHTSA crash-reporting data. This isn&apos;t a
-        real-time feed: city facts update by hand as news lands, refreshed{" "}
-        {robotaxiLastUpdated}.
-      </p>
-
-      <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <RollupStat
-          label="Cumulative autonomous miles"
-          value={numberFmt(cumulativeMiles.value)}
-          note={cumulativeMiles.note}
-        />
-        <RollupStat
-          label="Unsupervised miles"
-          value={numberFmt(cumulativeUnsupervisedMiles.value)}
-          note={cumulativeUnsupervisedMiles.note}
-        />
-        <RollupStat
-          label="Texas fleet (TxDMV)"
-          value={numberFmt(texasFleetCount.value)}
-          note={texasFleetCount.note}
-        />
-        <RollupStat
-          label="NHTSA-reported incidents"
-          value={incidents ? numberFmt(incidents.summary.totalIncidents) : "—"}
-          note={incidents ? `Live from NHTSA's SGO dataset, fetched ${new Date(incidents.summary.fetchedAt).toLocaleDateString()}` : "Unavailable right now"}
-        />
-      </div>
-
-      <div className="flex w-full flex-col gap-4 text-left">
-        <div className="text-sm uppercase tracking-wide text-white/50">Cities</div>
-        <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
-          {robotaxiCities.map((city) => (
-            <CityCard key={city.id} city={city} />
-          ))}
+    <div className="mx-auto w-full max-w-[1600px]">
+      {/* Header */}
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">Robotaxi</h1>
+          <p className="mt-1 max-w-2xl text-sm text-white/50">
+            Tesla&rsquo;s driverless ride-hailing rollout — deployment, mileage, safety reporting and
+            regulatory posture. Live NHTSA crash data and a rolling news scan; everything else is
+            hand-maintained from Tesla filings and cited reporting.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-wider text-white/35">
+          <span className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1">
+            FSD {fsdBuildVersion.value}
+          </span>
+          <span className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1">
+            {driverlessCities} driverless metros
+          </span>
+          <span className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1">
+            Static data {robotaxiLastUpdated}
+          </span>
         </div>
       </div>
 
-      <div className="w-full text-left">
-        <div className="mb-4 text-sm uppercase tracking-wide text-white/50">Notable sightings</div>
-        <ul className="flex flex-col gap-3">
-          {notableSightings.map((s) => (
-            <li key={s.id} className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">
-              <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-white/40">
-                <span>{s.city}</span>
-                <span>·</span>
-                <span>{s.vehicleType}</span>
-                <span>·</span>
-                <span>{s.date}</span>
-              </div>
-              <p className="mt-1 text-white/60">{s.description}</p>
+      {/* KPI strip — disclosed figures only */}
+      <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        <Metric
+          label="Unsupervised miles"
+          value={compact(cumulativeUnsupervisedMiles.value)}
+          sub={cumulativeUnsupervisedMiles.note}
+        />
+        <Metric
+          label="Cumulative paid miles"
+          value={compact(cumulativeMiles.value)}
+          sub={`${unsupervisedShare}% of paid miles now run unsupervised.`}
+        />
+        <Metric
+          label={`Paid miles · ${latestQuarter.quarter}`}
+          value={compact(latestQuarter.paidMiles.value)}
+          sub={latestQuarter.paidMiles.note}
+        />
+        <Metric
+          label="TX registered fleet"
+          value={num(texasFleetCount.value)}
+          sub={texasFleetCount.note}
+        />
+        <Metric
+          label="Cybercabs registered"
+          value={num(cybercabFleetCount.value)}
+          sub={cybercabFleetCount.note}
+        />
+        <Metric
+          label="Cybercab capacity"
+          value={`${compact(cybercab.installedAnnualCapacity.value)}/yr`}
+          sub={cybercab.installedAnnualCapacity.note}
+        />
+        <Metric
+          label="Observed unsupervised"
+          value={`~${num(observedUnsupervisedVehicles.value)}`}
+          sub={observedUnsupervisedVehicles.note}
+          accent="muted"
+        />
+        <Metric label="FSD subscriptions" value={compact(fsdSubscriptions.value)} sub={fsdSubscriptions.note} />
+        <Metric label="FSD attach rate" value={`>${fsdAttachRate.value}%`} sub={fsdAttachRate.note} />
+        <Metric
+          label="Cumulative FSD miles"
+          value={compact(fsdCumulativeMiles.value)}
+          sub={fsdCumulativeMiles.note}
+        />
+        <Metric
+          label="Services & Other rev."
+          value={usd(servicesAndOtherRevenue.value)}
+          sub={servicesAndOtherRevenue.note}
+        />
+        <Metric
+          label="Training compute"
+          value={`${trainingCompute.cortex1Mw.value + trainingCompute.cortex2Mw.value} MW`}
+          sub={`Cortex 1 (${trainingCompute.cortex1Mw.value} MW) + Cortex 2 (${trainingCompute.cortex2Mw.value} MW), both in production.`}
+        />
+      </div>
+
+      {/* Main grid */}
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
+        {/* min-w-0 on both columns: grid children default to min-width:auto,
+            which lets a wide table or a measured chart SVG push the page. */}
+        <div className="flex min-w-0 flex-col gap-3 xl:col-span-7">
+          <RobotaxiCityTable />
+          <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">
+            <RobotaxiMilesChart />
+            <RobotaxiFleetChart />
+          </div>
+          <RobotaxiRevenueModel />
+          <RobotaxiIncidentTable incidents={incidents} />
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-3 xl:col-span-5">
+          <RobotaxiNewsFeed news={news} />
+          <RobotaxiSafetyPanel incidents={incidents} />
+
+          <Card>
+            <SectionLabel>Not disclosed</SectionLabel>
+            <p className="mb-2 text-[11px] leading-snug text-white/40">
+              Tesla publishes none of the following and no credible third party measures them. They are
+              listed rather than estimated.
+            </p>
+            <ul className="flex flex-col gap-1.5 text-[11px] leading-snug text-white/45">
+              {notDisclosed.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span className="text-white/20">—</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 border-t border-white/10 pt-2 text-[10px] leading-snug text-white/25">
+              Deferred revenue of {usd(deferredRevenue.value)} bundles FSD with connectivity, Supercharging
+              and OTA updates, so it cannot be read as an FSD backlog either.
+            </p>
+          </Card>
+        </div>
+      </div>
+
+      {/* Sources */}
+      <div className="mt-4 border-t border-white/10 pt-3">
+        <div className="mb-1.5 text-[10px] uppercase tracking-[0.18em] text-white/35">Sources</div>
+        <ul className="flex flex-col gap-1 text-[10px] text-white/25 sm:columns-2 lg:columns-3">
+          {footnotes.map((f) => (
+            <li key={f.source} className="break-inside-avoid">
               <a
-                href={s.source}
+                href={f.source}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-1 inline-block text-xs text-white/40 underline decoration-white/20 hover:text-white/60"
+                className="underline decoration-white/15 underline-offset-2 hover:text-white/55"
               >
-                {s.sourceLabel}
+                {f.label}
               </a>
             </li>
           ))}
         </ul>
+        <p className="mt-2 text-[10px] leading-snug text-white/25">
+          Live sources: NHTSA Standing General Order 2021-01 (ADS incident reports) and publisher RSS
+          feeds for the news scan. {regulatoryActions.length} regulatory actions tracked. Static figures
+          last checked {robotaxiLastUpdated}.
+        </p>
       </div>
     </div>
   );

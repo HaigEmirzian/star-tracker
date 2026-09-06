@@ -1,4 +1,5 @@
 import type { CitedFigure } from "@/lib/data/gpuSpecs";
+import { collectFootnotes } from "@/lib/citations";
 import { computeDeals, dealsRollup, dealsLastUpdated, type ComputeDeal } from "@/lib/data/dealsStatic";
 
 const usdCompact = (v: number) =>
@@ -10,14 +11,6 @@ const usdCompact = (v: number) =>
   }).format(v);
 
 const numberFmt = (v: number) => v.toLocaleString();
-
-function collectFootnotes(figures: CitedFigure<unknown>[]) {
-  const seen = new Map<string, { label: string; source: string }>();
-  for (const fig of figures) {
-    seen.set(fig.source, { label: fig.sourceLabel, source: fig.source });
-  }
-  return Array.from(seen.values());
-}
 
 function RollupStat({ label, figure, format }: { label: string; figure: CitedFigure<number>; format: (v: number) => string }) {
   return (
