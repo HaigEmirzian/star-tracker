@@ -82,9 +82,12 @@ export default function RobotaxiMap() {
         </span>
       </div>
 
+      {/* Capped height so the map sets the scene without eating the fold — the
+          charts below should be visible on a normal laptop screen. The aspect
+          ratio is preserved; it just stops growing on very wide viewports. */}
       <svg
         viewBox={`0 0 ${US_MAP_VIEWBOX.width} ${US_MAP_VIEWBOX.height}`}
-        className="block h-auto w-full"
+        className="mx-auto block h-auto max-h-[440px] w-full"
         role="img"
         aria-label={`Map of the United States showing ${driverless} metros with driverless Tesla robotaxi service, plus cities under a safety-driver requirement, permitted but not open, and announced only.`}
       >

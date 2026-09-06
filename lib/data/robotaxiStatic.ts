@@ -243,19 +243,75 @@ export const cumulativeUnsupervisedMiles: CitedFigure<number> = {
 
 export interface QuarterlyMiles {
   quarter: string;
+  /** Miles added during the quarter. */
   paidMiles: CitedFigure<number>;
+  /** Cumulative paid miles at the quarter's close — the figure Tesla actually
+   *  reports; the per-quarter value above is the difference between
+   *  consecutive closes. */
+  cumulative: CitedFigure<number>;
+  /** True when the source read the figure off Tesla's chart rather than
+   *  quoting a stated number. The UI marks these. */
+  approximate?: boolean;
 }
 
-// Tesla reports paid robotaxi miles per quarter. The Q2 decline is real and
-// Tesla-acknowledged — do not smooth it or present it as growth.
+// Tesla reports paid robotaxi miles as a CUMULATIVE line in its shareholder
+// deck, so the per-quarter values here are differences between consecutive
+// disclosed closes — arithmetic over two disclosed figures, which is why they
+// render as a normal metric rather than a derived one.
+//
+// The Q2 2026 decline is real and Tesla-acknowledged. Do not smooth it,
+// re-order it, or present it as growth.
+//
+// Sourcing note: Electrek read ~1.5M off Tesla's Q1 chart, while Drive Tesla
+// quoted 1.7M. 1.7M is the figure kept here because it is the one stated in
+// prose rather than eyeballed off a plot, and because it reconciles exactly
+// with both the 610K Q4 2025 close and the 1.1M / 700K quarterly adds
+// reported at Q2 (610K + 1.09M = 1.7M; 1.7M + 0.7M = 2.4M). If a future
+// source contradicts that, re-check the whole chain rather than one point.
 export const quarterlyPaidMiles: QuarterlyMiles[] = [
+  {
+    quarter: "Q3 2025",
+    approximate: true,
+    paidMiles: {
+      value: 150_000,
+      source: "https://electrek.co/2026/07/22/tesla-robotaxi-growth-flat-own-chart-q2-2026/",
+      sourceLabel: "Electrek — Tesla's own chart shows robotaxi growth is flat",
+      note: "Read off Tesla's cumulative chart rather than stated in prose. The paid service launched in Austin in June 2025 and Tesla's chart begins around August 2025, so this is a partial quarter.",
+    },
+    cumulative: {
+      value: 150_000,
+      source: "https://electrek.co/2026/07/22/tesla-robotaxi-growth-flat-own-chart-q2-2026/",
+      sourceLabel: "Electrek — Tesla's own chart shows robotaxi growth is flat",
+    },
+  },
+  {
+    quarter: "Q4 2025",
+    paidMiles: {
+      value: 460_000,
+      source: "https://driveteslacanada.ca/news/tesla-robotaxi-usage-surges-in-q1-2026-as-paid-miles-nearly-triple/",
+      sourceLabel: "Drive Tesla — paid robotaxi miles nearly triple in Q1 2026",
+      note: "Difference between the 610,000-mile Q4 2025 close and the Q3 2025 position.",
+    },
+    cumulative: {
+      value: 610_000,
+      source: "https://driveteslacanada.ca/news/tesla-robotaxi-usage-surges-in-q1-2026-as-paid-miles-nearly-triple/",
+      sourceLabel: "Drive Tesla — paid robotaxi miles nearly triple in Q1 2026",
+      note: "Cumulative paid robotaxi miles at the close of Q4 2025.",
+    },
+  },
   {
     quarter: "Q1 2026",
     paidMiles: {
-      value: 1_100_000,
+      value: 1_090_000,
       source: "https://evwire.com/p/tesla-q2-2026-earnings-results",
       sourceLabel: "EVWire — Tesla Q2 2026 earnings recap",
-      note: "Paid robotaxi miles in Q1 2026.",
+      note: "Tesla's strongest quarter so far — paid miles nearly tripled against Q4 2025.",
+    },
+    cumulative: {
+      value: 1_700_000,
+      source: "https://driveteslacanada.ca/news/tesla-robotaxi-usage-surges-in-q1-2026-as-paid-miles-nearly-triple/",
+      sourceLabel: "Drive Tesla — paid robotaxi miles nearly triple in Q1 2026",
+      note: "Cumulative paid robotaxi miles at the close of Q1 2026.",
     },
   },
   {
@@ -265,6 +321,12 @@ export const quarterlyPaidMiles: QuarterlyMiles[] = [
       source: "https://evwire.com/p/tesla-q2-2026-earnings-results",
       sourceLabel: "EVWire — Tesla Q2 2026 earnings recap",
       note: "Down 36% quarter-over-quarter. Tesla attributes the decline to accumulating driving data specific to the Cybercab while being cautious on safety — not to demand.",
+    },
+    cumulative: {
+      value: 2_400_000,
+      source: "https://assets-ir.tesla.com/tesla-contents/IR/TSLA-Q2-2026-Update.pdf",
+      sourceLabel: "Tesla Q2 2026 shareholder deck",
+      note: "Cumulative paid robotaxi miles at the close of Q2 2026.",
     },
   },
 ];
@@ -312,6 +374,57 @@ export const fsdSubscriptions: CitedFigure<number> = {
   sourceLabel: "EVWire — Tesla Q2 2026 earnings recap",
   note: "Active FSD subscriptions as of Q2 2026, up 56% year-over-year.",
 };
+
+export interface QuarterlyFsdSubs {
+  quarter: string;
+  subs: CitedFigure<number>;
+}
+
+// Tesla only began disclosing a subscriber count with Q4 2025 (the first time
+// it had ever published one), so this series starts there rather than being
+// back-filled. The Q2 2025 point is the comparison base Tesla itself cited for
+// its "+56% YoY" claim — a stated figure, not one we computed.
+//
+// There is no Q3 2025 point: Tesla published none, and interpolating between
+// Q2 2025 and Q4 2025 would invent one. The chart leaves the gap visible.
+export const quarterlyFsdSubs: QuarterlyFsdSubs[] = [
+  {
+    quarter: "Q2 2025",
+    subs: {
+      value: 950_000,
+      source: "https://www.notateslaapp.com/news/4483/tesla-fsd-reaches-148-million-active-subscriptions",
+      sourceLabel: "Not a Tesla App — FSD reaches 1.48 million active subscriptions",
+      note: "The base Tesla cited for its +56% year-over-year figure at Q2 2026.",
+    },
+  },
+  {
+    quarter: "Q4 2025",
+    subs: {
+      value: 1_100_000,
+      source: "https://electrek.co/2026/01/28/tesla-discloses-fsd-subscriber-count-first-time-1-million/",
+      sourceLabel: "Electrek — Tesla discloses an FSD subscriber count for the first time",
+      note: "The first subscriber count Tesla ever published, on the Q4 2025 call.",
+    },
+  },
+  {
+    quarter: "Q1 2026",
+    subs: {
+      value: 1_280_000,
+      source: "https://www.basenor.com/blogs/news/tesla-fsd-hits-1-28m-subscribers-in-q1-2026-record-growth",
+      sourceLabel: "Basenor — FSD hits 1.28M subscribers in Q1 2026",
+      note: "About 180,000 net additions over Q4 2025, a record at the time.",
+    },
+  },
+  {
+    quarter: "Q2 2026",
+    subs: {
+      value: 1_480_000,
+      source: "https://evwire.com/p/tesla-q2-2026-earnings-results",
+      sourceLabel: "EVWire — Tesla Q2 2026 earnings recap",
+      note: "Roughly 45% of these are recurring monthly subscribers; the rest bought FSD outright.",
+    },
+  },
+];
 
 export const fsdAttachRate: CitedFigure<number> = {
   value: 55,

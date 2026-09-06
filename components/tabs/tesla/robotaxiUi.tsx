@@ -115,9 +115,12 @@ export function Pill({
     warn: "border-amber-300/30 bg-amber-300/10 text-amber-200",
     info: "border-sky-300/30 bg-sky-300/10 text-sky-200",
   } as const;
+  // whitespace-nowrap keeps a two-word status ("Safety driver") as one pill.
+  // Without it the text wraps and the rounded border paints around each line,
+  // reading as two broken pills stacked on top of each other.
   return (
     <span
-      className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider ${tones[tone]}`}
+      className={`inline-block shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider ${tones[tone]}`}
     >
       {children}
     </span>

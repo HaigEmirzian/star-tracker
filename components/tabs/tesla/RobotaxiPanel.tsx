@@ -91,7 +91,9 @@ export default function RobotaxiPanel({ incidents, news, fleet }: RobotaxiPanelP
       </div>
 
       {/* ── Hero: the map, and the numbers worth leading with ── */}
-      <div className="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+      {/* Wider right rail than the map needs, which trims the map back a little
+          and gives the counter and metrics room to breathe. */}
+      <div className="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_440px]">
         <RobotaxiMap />
 
         <div className="flex min-w-0 flex-col gap-3">

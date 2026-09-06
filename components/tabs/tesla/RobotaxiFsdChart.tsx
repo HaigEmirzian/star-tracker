@@ -1,72 +1,109 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, XAxis, YAxis } from "recharts";
-import { fsdSubscriptions, fsdAttachRate, fsdCumulativeMiles } from "@/lib/data/robotaxiStatic";
-import { compact } from "@/components/tabs/tesla/robotaxiUi";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { quarterlyFsdSubs, fsdAttachRate, fsdCumulativeMiles } from "@/lib/data/robotaxiStatic";
+import { compact, num, SectionLabel } from "@/components/tabs/tesla/robotaxiUi";
 
+// FSD active subscriptions by quarter. Every point is a figure Tesla or its
+// coverage stated — nothing here is interpolated, which is why the series
+// jumps straight from Q2 2025 to Q4 2025: Tesla published no Q3 2025 count,
+// and inventing one to make the spacing even would be exactly the kind of
+// smoothing the rest of this panel refuses to do. The note says so.
 const SERIES = "#3987e5";
 
-// FSD subscription scale. Tesla publishes the current count and a
-// year-over-year change but no quarterly series, so this is deliberately TWO
-// bars rather than an invented trend line: the prior-year value is implied by
-// dividing the disclosed count by the disclosed growth rate — arithmetic over
-// two disclosed figures — and is labelled as implied on screen.
-export default function RobotaxiFsdChart() {
-  const current = fsdSubscriptions.value;
-  const growth = 0.56; // Tesla-stated +56% YoY, same source as the count.
-  const priorYear = Math.round(current / (1 + growth));
+function TooltipContent({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: { value?: number }[];
+  label?: string | number;
+}) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-white/15 bg-black/90 px-3 py-2 text-xs shadow-lg backdrop-blur-sm">
+      <div className="text-white/50">{label}</div>
+      <div className="font-mono font-semibold tabular-nums text-white">
+        {num(payload[0].value ?? 0)} subscriptions
+      </div>
+    </div>
+  );
+}
 
-  const data = [
-    { period: "Q2 2025", subs: priorYear },
-    { period: "Q2 2026", subs: current },
-  ];
+export default function RobotaxiFsdChart() {
+  const data = quarterlyFsdSubs.map((q) => ({
+    quarter: q.quarter.replace(" 20", " '"),
+    subs: q.subs.value,
+  }));
+
+  if (data.length < 2) return null;
+
+  const first = data[0].subs;
+  const last = data[data.length - 1].subs;
+  const growthPct = Math.round(((last - first) / first) * 100);
 
   return (
     <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-3 backdrop-blur-sm">
-      <div className="mb-1 flex items-baseline justify-between gap-3">
-        <h3 className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/45">
-          FSD subscriptions
-        </h3>
-        <span className="font-mono text-[11px] tabular-nums text-emerald-300/80">+56% YoY</span>
-      </div>
+      <SectionLabel
+        right={<span className="text-emerald-300/80">+{growthPct}% since {data[0].quarter}</span>}
+      >
+        FSD subscriptions
+      </SectionLabel>
 
-      <div className="h-[108px] w-full min-w-0">
+      <div className="h-[170px] w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 16, right: 4, bottom: 0, left: 0 }}>
+          <AreaChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
+            <defs>
+              <linearGradient id="rtFsdFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={SERIES} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={SERIES} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
             <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.07)" strokeDasharray="0" />
             <XAxis
-              dataKey="period"
+              dataKey="quarter"
               tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }}
               tickLine={false}
               axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
             />
-            <YAxis hide />
-            <Bar dataKey="subs" radius={[4, 4, 0, 0]} isAnimationActive={false} maxBarSize={70}>
-              {/* The implied prior-year bar is dimmed so the published figure
-                  reads as the solid one; the note below says so in words too. */}
-              {data.map((d) => (
-                <Cell key={d.period} fill={SERIES} fillOpacity={d.period === "Q2 2025" ? 0.45 : 1} />
-              ))}
-              <LabelList
-                dataKey="subs"
-                position="top"
-                offset={6}
-                fill="rgba(255,255,255,0.75)"
-                fontSize={11}
-                formatter={(v) => (typeof v === "number" ? compact(v) : "")}
-              />
-            </Bar>
-          </BarChart>
+            <YAxis
+              tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }}
+              tickLine={false}
+              axisLine={false}
+              width={38}
+              tickFormatter={(v: number) => compact(v)}
+            />
+            <Tooltip content={<TooltipContent />} cursor={{ stroke: "rgba(255,255,255,0.2)" }} />
+            <Area
+              type="monotone"
+              dataKey="subs"
+              stroke={SERIES}
+              strokeWidth={2}
+              fill="url(#rtFsdFill)"
+              dot={{ r: 2.5, fill: SERIES, stroke: "#08090c", strokeWidth: 1.5 }}
+              activeDot={{ r: 4, fill: SERIES, stroke: "#08090c", strokeWidth: 2 }}
+              isAnimationActive={false}
+            />
+          </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="mt-1 flex flex-wrap gap-x-3 font-mono text-[10px] tabular-nums text-white/40">
+      <div className="mt-1.5 flex flex-wrap gap-x-3 font-mono text-[10px] tabular-nums text-white/40">
         <span>&gt;{fsdAttachRate.value}% attach</span>
         <span>{compact(fsdCumulativeMiles.value)} cumulative mi</span>
       </div>
       <p className="mt-1 text-[10px] leading-snug text-white/25">
-        Q2 2025 is implied by the disclosed +56% growth, not separately published. Consumer FSD, a
-        far larger population than the robotaxi fleet.
+        Tesla published no Q3 2025 count, so the series skips it rather than interpolating. Consumer
+        FSD &mdash; a far larger population than the robotaxi fleet.
       </p>
     </div>
   );

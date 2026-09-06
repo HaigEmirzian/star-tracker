@@ -63,8 +63,9 @@ export default function RobotaxiFleetChart({ fleet }: { fleet: TxdmvFleetData | 
         )}
       </div>
 
-      {/* min-w-0 — Recharts' measured SVG is otherwise an unshrinkable floor. */}
-      <div className="h-[108px] w-full min-w-0">
+      {/* min-w-0 — Recharts' measured SVG is otherwise an unshrinkable floor.
+          170px matches the sibling charts so the row lines up. */}
+      <div className="h-[170px] w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 6, right: 4, bottom: 0, left: 0 }}>
             <defs>
