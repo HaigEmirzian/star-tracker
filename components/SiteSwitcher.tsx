@@ -26,16 +26,7 @@ export default function SiteSwitcher({ starlinkData, robotaxiData }: SiteSwitche
   // site toggle is hidden entirely and only the SpaceX tracker renders.
   const activeSite: Site = futureFeaturesEnabled ? site : "spacex";
 
-  return (
-    <>
-      {activeSite === "spacex" ? <Starfield /> : <TeslaBackdrop />}
-
-      <div className="relative w-full">
-        {/* In normal flow (not absolute) so it can never overlap — and steal
-            clicks from — TabSwitcher's/TeslaTabSwitcher's own z-10 tab bar
-            below it, whatever the viewport width. */}
-        {futureFeaturesEnabled && (
-          <div className="mb-4 flex justify-end">
+  const siteToggle = futureFeaturesEnabled ? (
             <div role="group" aria-label="Site" className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 p-1.5 backdrop-blur-sm">
               <button
                 type="button"
@@ -60,13 +51,19 @@ export default function SiteSwitcher({ starlinkData, robotaxiData }: SiteSwitche
                 <Image src="/images/logos/tesla.png" alt="Tesla" fill className="object-contain p-1" />
               </button>
             </div>
-          </div>
-        )}
+  ) : null;
+
+  return (
+    <>
+      {activeSite === "spacex" ? <Starfield /> : <TeslaBackdrop />}
+
+      <div className="relative w-full">
+
 
         {activeSite === "spacex" ? (
-          <TabSwitcher starlinkData={starlinkData} />
+          <TabSwitcher starlinkData={starlinkData} siteToggle={siteToggle} />
         ) : (
-          <TeslaTabSwitcher robotaxiData={robotaxiData} />
+          <TeslaTabSwitcher robotaxiData={robotaxiData} siteToggle={siteToggle} />
         )}
       </div>
 

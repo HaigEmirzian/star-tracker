@@ -13,6 +13,16 @@ import { num } from "@/components/tabs/tesla/robotaxiUi";
 // rendered as its own metric — never as a point here.
 const SERIES = "#3987e5";
 
+function formatDate(label: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(label)) return label;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${label}T00:00:00Z`));
+}
+
 function TooltipContent({
   active,
   payload,
@@ -24,7 +34,7 @@ function TooltipContent({
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-white/15 bg-black/90 px-3 py-2 text-xs shadow-lg backdrop-blur-sm">
+    <div className="rounded-lg border border-white/15 bg-black/90 px-3 py-2 text-sm shadow-lg backdrop-blur-sm">
       <div className="text-white/50">{label}</div>
       <div className="font-mono font-semibold tabular-nums text-white">
         {num(payload[0].value ?? 0)} registered
@@ -39,35 +49,22 @@ export default function RobotaxiFleetChart({ fleet }: { fleet: TxdmvFleetData | 
 
   const data = isLive
     ? live.map((p) => ({ label: p.label, count: p.count }))
-    : texasFleetObservations.map((o) => ({ label: o.date, count: o.total.value }));
+    : texasFleetObservations.map((o) => ({ label: formatDate(o.date), count: o.total.value }));
 
   if (data.length < 2) return null;
 
-  const first = data[0];
   const last = data[data.length - 1];
 
   return (
-    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-3 backdrop-blur-sm">
-      <div className="mb-1 flex items-baseline justify-between gap-3">
-        <h3 className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/45">
-          TX registered fleet
-        </h3>
-        {fleet?.tesla ? (
-          <span className="font-mono text-[11px] tabular-nums text-emerald-300/80">
-            +{fleet.tesla.growth30dPct.toFixed(1)}% / 30d
-          </span>
-        ) : (
-          <span className="text-[10px] uppercase tracking-wider text-white/25">
-            {data.length} observations
-          </span>
-        )}
+    <div className="min-w-0 rounded-lg border border-white/15 bg-white/[0.06] p-5 backdrop-blur-sm">
+      <h3 className="text-base font-semibold text-white/80">Texas registered fleet</h3>
+      <div className="mb-4 mt-2 font-mono text-3xl font-semibold tabular-nums text-white">
+        {num(last.count)}
       </div>
 
-      {/* min-w-0 — Recharts' measured SVG is otherwise an unshrinkable floor.
-          170px matches the sibling charts so the row lines up. */}
-      <div className="h-[170px] w-full min-w-0">
+      <div className="h-[240px] w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 6, right: 4, bottom: 0, left: 0 }}>
+          <AreaChart data={data} margin={{ top: 6, right: 16, bottom: 8, left: 0 }}>
             <defs>
               <linearGradient id="rtFleetFill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={SERIES} stopOpacity={0.3} />
@@ -75,12 +72,23 @@ export default function RobotaxiFleetChart({ fleet }: { fleet: TxdmvFleetData | 
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.07)" strokeDasharray="0" />
-            <XAxis dataKey="label" hide />
+            <XAxis
+              dataKey="label"
+              tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 12 }}
+              tickLine={false}
+              axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
+              interval="preserveStartEnd"
+              minTickGap={24}
+              height={48}
+              label={{ value: "Date", position: "insideBottom", fill: "rgba(255,255,255,0.6)", fontSize: 13 }}
+            />
             <YAxis
-              tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }}
+              tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 12 }}
               tickLine={false}
               axisLine={false}
-              width={34}
+              width={64}
+              allowDecimals={false}
+              label={{ value: "Vehicles", angle: -90, position: "insideLeft", fill: "rgba(255,255,255,0.6)", fontSize: 13 }}
             />
             <Tooltip content={<TooltipContent />} cursor={{ stroke: "rgba(255,255,255,0.2)" }} />
             <Area
@@ -97,19 +105,6 @@ export default function RobotaxiFleetChart({ fleet }: { fleet: TxdmvFleetData | 
         </ResponsiveContainer>
       </div>
 
-      <div className="mt-1 flex justify-between font-mono text-[10px] tabular-nums text-white/30">
-        <span>
-          {first.label} · {num(first.count)}
-        </span>
-        <span>
-          {last.label} · {num(last.count)}
-        </span>
-      </div>
-      <p className="mt-1 text-[10px] leading-snug text-white/25">
-        {isLive
-          ? "Live from the Texas DMV autonomous-vehicle registry. Registrations, not vehicles in service."
-          : "Two cited observations, not interpolated. Registrations, not vehicles in service."}
-      </p>
     </div>
   );
 }

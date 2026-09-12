@@ -43,7 +43,7 @@ export default function RobotaxiFsdCounter() {
       <div className="mb-2 flex items-center gap-2">
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
         <h2 className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/55">
-          Cumulative FSD miles
+          Cumulative FSD miles (estimated)
         </h2>
       </div>
 
@@ -60,11 +60,6 @@ export default function RobotaxiFsdCounter() {
         )}
       </div>
 
-      <p className="mt-2 text-[10.5px] leading-relaxed text-white/35">
-        Projected forward from Tesla&rsquo;s last disclosed total at its stated rate of{" "}
-        <span className="font-mono text-white/55">20.4M mi/day</span>. A projection, not a live feed
-        &mdash; consumer FSD, separate from the robotaxi fleet&rsquo;s autonomous miles.
-      </p>
       <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5">
         {[fsdMilesAnchor.miles, fsdMilesAnchor.milesPerDay].map((figure) => (
           <a

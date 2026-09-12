@@ -1,23 +1,15 @@
 import {
-  cumulativeMiles,
   cumulativeUnsupervisedMiles,
-  cybercab,
   cybercabFleetCount,
-  deferredRevenue,
-  fsdBuildVersion,
-  notDisclosed,
-  observedUnsupervisedVehicles,
   quarterlyPaidMiles,
   regulatoryActions,
   robotaxiCities,
-  robotaxiLastUpdated,
-  servicesAndOtherRevenue,
   texasFleetCount,
 } from "@/lib/data/robotaxiStatic";
 import type { RobotaxiIncidentData } from "@/lib/data/nhtsaRobotaxiTypes";
 import type { RobotaxiNewsData } from "@/lib/data/robotaxiNewsTypes";
 import type { TxdmvFleetData } from "@/lib/data/txdmvFleetTypes";
-import { compact, num, usd, Metric } from "@/components/tabs/tesla/robotaxiUi";
+import { compact, num, Metric } from "@/components/tabs/tesla/robotaxiUi";
 import RobotaxiCityTable from "@/components/tabs/tesla/RobotaxiCityTable";
 import RobotaxiFleetChart from "@/components/tabs/tesla/RobotaxiFleetChart";
 import RobotaxiFsdChart from "@/components/tabs/tesla/RobotaxiFsdChart";
@@ -60,7 +52,7 @@ export default function RobotaxiPanel({ incidents, news, fleet }: RobotaxiPanelP
   return (
     <div className="mx-auto w-full max-w-[1500px]">
       {/* ── Masthead ─────────────────────────────────────────── */}
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-[34px] font-semibold leading-none tracking-tight text-white">
@@ -76,17 +68,6 @@ export default function RobotaxiPanel({ incidents, news, fleet }: RobotaxiPanelP
             come live from the Texas DMV registry, crash reports from NHTSA, and headlines from a
             rolling news scan.
           </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/35">
-          <span className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1">
-            FSD {fsdBuildVersion.value}
-          </span>
-          <span className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1">
-            {liveFleet ? "TxDMV live" : "TxDMV cached"}
-          </span>
-          <span className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1">
-            Static data {robotaxiLastUpdated}
-          </span>
         </div>
       </div>
 
@@ -129,7 +110,7 @@ export default function RobotaxiPanel({ incidents, news, fleet }: RobotaxiPanelP
       </div>
 
       {/* ── Charts: what used to be a wall of text tiles ─────── */}
-      <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <RobotaxiFleetChart fleet={fleet} />
         <RobotaxiMilesChart />
         <RobotaxiFsdChart />
@@ -151,36 +132,13 @@ export default function RobotaxiPanel({ incidents, news, fleet }: RobotaxiPanelP
           <RobotaxiSection
             id="economics"
             title="Economics"
-            summary="Fare structure, and a revenue model derived from cited inputs"
-            count="derived"
+            summary="Estimated fares and costs"
+            count="estimate"
           >
             <RobotaxiRevenueModel />
           </RobotaxiSection>
 
-          <RobotaxiSection
-            id="gaps"
-            title="Not disclosed"
-            summary="What Tesla publishes no figure for, listed rather than estimated"
-            count={`${notDisclosed.length} gaps`}
-          >
-            <ul className="flex flex-col gap-1.5 text-[11px] leading-snug text-white/45">
-              {notDisclosed.map((item) => (
-                <li key={item} className="flex gap-2">
-                  <span className="text-white/20">&mdash;</span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-2.5 border-t border-white/10 pt-2.5 text-[10px] leading-snug text-white/25">
-              Robotaxi and FSD revenue sit inside {usd(servicesAndOtherRevenue.value)} of
-              &ldquo;Services &amp; Other&rdquo; with no breakout, and {usd(deferredRevenue.value)} of
-              deferred revenue bundles FSD with connectivity, Supercharging and OTA updates &mdash; so
-              neither can be read as a robotaxi figure. Observed unsupervised vehicles (~
-              {num(observedUnsupervisedVehicles.value)}) is a crowdsourced sighting count, not a filing.
-              Cumulative paid miles stand at {compact(cumulativeMiles.value)}; Cybercab capacity at{" "}
-              {compact(cybercab.installedAnnualCapacity.value)}/yr is installed capacity, not output.
-            </p>
-          </RobotaxiSection>
+
         </div>
 
         <div className="flex min-w-0 flex-col gap-3">
