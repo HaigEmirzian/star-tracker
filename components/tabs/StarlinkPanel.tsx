@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import { useNow } from "@/lib/hooks/useNow";
 import { fccStarlinkAuthorization, starlinkNetwork, firstLaunchDate } from "@/lib/data/fccStatic";
 import type { StarlinkSummary, StarlinkGpEntry } from "@/lib/data/celestrak";
 import type { LaunchSummary } from "@/lib/data/launchLibrary";
@@ -65,24 +65,6 @@ function formatCountdown(netIso: string, nowMs: number): string {
   if (days > 0) return `${days}d ${hours}h`;
   const minutes = Math.floor((diffMs / (1000 * 60)) % 60);
   return `${hours}h ${minutes}m`;
-}
-
-// Any Date.now()-derived display must be computed client-side after mount:
-// this component renders during SSR/ISR too, and baking "now" into that
-// render would either mismatch the client's hydration time (React warning)
-// or go stale for up to the ISR revalidate window. This is the standard
-// "defer a client-only value past hydration" exception to the no-setState-
-// in-effect rule (not a cascading-render risk — it fires once on mount).
-// useSyncExternalStore isn't a safe alternative here: StarlinkPanel actually
-// unmounts/remounts on every tab switch, so a module-level cached snapshot
-// would freeze "now" at first-ever mount instead of refreshing per visit.
-function useNow(): number | null {
-  const [now, setNow] = useState<number | null>(null);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setNow(Date.now());
-  }, []);
-  return now;
 }
 
 function LaunchListItem({ launch }: { launch: LaunchSummary }) {

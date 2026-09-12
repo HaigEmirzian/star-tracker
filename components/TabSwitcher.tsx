@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import StarlinkPanel, { StarlinkPanelProps } from "@/components/tabs/StarlinkPanel";
 import StarmindPanel from "@/components/tabs/StarmindPanel";
 import ScalePanel from "@/components/tabs/ScalePanel";
 import DealsPanel from "@/components/tabs/DealsPanel";
+
+import TrackerNavigation from "@/components/TrackerNavigation";
 
 type Tab = "starlink" | "starmind" | "scale" | "deals";
 
@@ -24,7 +26,7 @@ function isTypingTarget(el: EventTarget | null) {
   );
 }
 
-export default function TabSwitcher({ starlinkData }: { starlinkData: StarlinkPanelProps }) {
+export default function TabSwitcher({ starlinkData, siteToggle }: { starlinkData: StarlinkPanelProps; siteToggle?: ReactNode }) {
   const [tab, setTab] = useState<Tab>("starmind");
   const buttonRefs = useRef<Record<Tab, HTMLButtonElement | null>>({
     starmind: null,
@@ -85,13 +87,13 @@ export default function TabSwitcher({ starlinkData }: { starlinkData: StarlinkPa
     <div className="w-full">
       {/* z-10 keeps the tab bar above the Scale panel, which is fixed at z-0
           so it can fill the viewport without leaving stray page scroll. */}
-      <div className="relative z-10 mb-6 flex justify-center">
+      <TrackerNavigation siteToggle={siteToggle}>
         <div
           ref={tablistRef}
           role="tablist"
           aria-label="Tracker section"
           onKeyDown={onKeyDown}
-          className="inline-flex rounded-full border border-white/15 bg-white/5 p-1 backdrop-blur-sm"
+          className="inline-flex rounded-full border border-white/15 bg-white/5 p-1.5 backdrop-blur-sm"
         >
           {TABS.map((t) => (
             <button
@@ -115,7 +117,7 @@ export default function TabSwitcher({ starlinkData }: { starlinkData: StarlinkPa
             </button>
           ))}
         </div>
-      </div>
+      </TrackerNavigation>
 
       <div
         role="tabpanel"

@@ -1,6 +1,11 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { parse } from "csv-parse/sync";
+import type {
+  RobotaxiIncident,
+  RobotaxiIncidentSummary,
+  RobotaxiIncidentData,
+} from "@/lib/data/nhtsaRobotaxiTypes";
 
 // NHTSA's Standing General Order (SGO) 2021-01 requires every company
 // testing/deploying SAE Level 3+ automated driving systems (ADS) on public
@@ -24,36 +29,31 @@ const TESLA_REPORTING_ENTITY = "Tesla, Inc.";
 const REVALIDATE_SECONDS = 60 * 60 * 24;
 const FAILURE_RETRY_SECONDS = 60 * 60;
 
-export interface RobotaxiIncident {
-  reportId: string;
-  incidentDate: string; // e.g. "JUN-2026", as NHTSA reports it (month granularity)
-  city: string;
-  state: string;
-  driverOperatorType: string; // "None" (driverless) | "In-Vehicle (Commercial / Test)" | "Remote (Commercial / Test)"
-  severity: string;
-  narrative: string;
-}
+// A hung NHTSA host would otherwise hang every page render — page.tsx awaits
+// this inside its Promise.all, so it sits on the SSR critical path.
+const FETCH_TIMEOUT_MS = 10_000;
 
-export interface RobotaxiIncidentSummary {
-  totalIncidents: number;
-  byMonth: { month: string; count: number }[];
-  byCity: { city: string; count: number }[];
-  bySeverity: { severity: string; count: number }[];
-  remoteOperatorIncidents: number;
-  driverlessIncidents: number;
-  latestIncident: RobotaxiIncident | null;
-  fetchedAt: string;
-}
+// NHTSA narratives run to multiple KB each; the UI only ever shows a lead-in.
+const NARRATIVE_EXCERPT_CHARS = 180;
 
-export interface RobotaxiIncidentData {
-  summary: RobotaxiIncidentSummary;
-  incidents: RobotaxiIncident[];
-}
+export type {
+  RobotaxiIncident,
+  RobotaxiIncidentSummary,
+  RobotaxiIncidentData,
+} from "@/lib/data/nhtsaRobotaxiTypes";
 
 function monthSortKey(month: string): number {
   const [mon, year] = month.split("-");
   const idx = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"].indexOf(mon);
   return Number(year) * 12 + (idx === -1 ? 0 : idx);
+}
+
+// Collapse NHTSA's hard-wrapped narrative text and cut it to a lead-in, so
+// the client gets a readable one-liner instead of multiple KB per row.
+function excerpt(narrative: string): string {
+  const flat = narrative.replace(/\s+/g, " ").trim();
+  if (flat.length <= NARRATIVE_EXCERPT_CHARS) return flat;
+  return `${flat.slice(0, NARRATIVE_EXCERPT_CHARS).trimEnd()}…`;
 }
 
 function summarize(incidents: RobotaxiIncident[]): RobotaxiIncidentSummary {
@@ -98,7 +98,9 @@ function summarize(incidents: RobotaxiIncident[]): RobotaxiIncidentSummary {
 }
 
 async function fetchFromNhtsa(): Promise<RobotaxiIncidentData> {
-  const res = await fetch(NHTSA_ADS_CSV_URL);
+  const res = await fetch(NHTSA_ADS_CSV_URL, {
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
   if (!res.ok) {
     throw new Error(`NHTSA SGO request failed: ${res.status}`);
   }
@@ -126,7 +128,7 @@ async function fetchFromNhtsa(): Promise<RobotaxiIncidentData> {
       state: row["State"] ?? "",
       driverOperatorType: row["Driver / Operator Type"] ?? "",
       severity: row["Highest Injury Severity Alleged"] ?? "",
-      narrative: row["Narrative"] ?? "",
+      narrativeExcerpt: excerpt(row["Narrative"] ?? ""),
     }));
 
   return { summary: summarize(incidents), incidents };
@@ -139,7 +141,11 @@ async function fetchFromNhtsa(): Promise<RobotaxiIncidentData> {
 // instead of a blank panel. Best-effort in production (serverless fs isn't
 // reliably writable/persistent) — every fs call below fails silently and
 // falls through to a live fetch.
-const DISK_CACHE_FILE = path.join(process.cwd(), ".cache", "robotaxi-nhtsa-data.json");
+// The filename carries a schema version: a cache written before
+// `narrative` became `narrativeExcerpt` would deserialize into the new type
+// with the field silently missing. Bump the suffix whenever the cached shape
+// changes rather than adding migration code for a regenerable cache.
+const DISK_CACHE_FILE = path.join(process.cwd(), ".cache", "robotaxi-nhtsa-data.v2.json");
 
 interface DiskCacheEntry {
   data?: RobotaxiIncidentData;

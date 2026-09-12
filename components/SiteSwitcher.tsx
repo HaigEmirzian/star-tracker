@@ -7,33 +7,26 @@ import TeslaTabSwitcher from "@/components/TeslaTabSwitcher";
 import Starfield from "@/components/Starfield";
 import TeslaBackdrop from "@/components/TeslaBackdrop";
 import type { StarlinkPanelProps } from "@/components/tabs/StarlinkPanel";
-import type { RobotaxiIncidentData } from "@/lib/data/nhtsaRobotaxi";
+import type { RobotaxiPanelProps } from "@/components/tabs/tesla/RobotaxiPanel";
 import { futureFeaturesEnabled } from "@/lib/flags";
 
 type Site = "spacex" | "tesla";
 
 export interface SiteSwitcherProps {
   starlinkData: StarlinkPanelProps;
-  robotaxiIncidents: RobotaxiIncidentData | null;
+  // Bundled the same way `starlinkData` is, so adding another live Tesla
+  // source stays a one-file diff rather than a four-file prop-drill.
+  robotaxiData: RobotaxiPanelProps;
 }
 
-export default function SiteSwitcher({ starlinkData, robotaxiIncidents }: SiteSwitcherProps) {
+export default function SiteSwitcher({ starlinkData, robotaxiData }: SiteSwitcherProps) {
   const [site, setSite] = useState<Site>("spacex");
 
   // The Tesla side is gated behind `futureFeaturesEnabled` — when it's off, the
   // site toggle is hidden entirely and only the SpaceX tracker renders.
   const activeSite: Site = futureFeaturesEnabled ? site : "spacex";
 
-  return (
-    <>
-      {activeSite === "spacex" ? <Starfield /> : <TeslaBackdrop />}
-
-      <div className="relative w-full">
-        {/* In normal flow (not absolute) so it can never overlap — and steal
-            clicks from — TabSwitcher's/TeslaTabSwitcher's own z-10 tab bar
-            below it, whatever the viewport width. */}
-        {futureFeaturesEnabled && (
-          <div className="mb-4 flex justify-end">
+  const siteToggle = futureFeaturesEnabled ? (
             <div role="group" aria-label="Site" className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 p-1.5 backdrop-blur-sm">
               <button
                 type="button"
@@ -58,13 +51,19 @@ export default function SiteSwitcher({ starlinkData, robotaxiIncidents }: SiteSw
                 <Image src="/images/logos/tesla.png" alt="Tesla" fill className="object-contain p-1" />
               </button>
             </div>
-          </div>
-        )}
+  ) : null;
+
+  return (
+    <>
+      {activeSite === "spacex" ? <Starfield /> : <TeslaBackdrop />}
+
+      <div className="relative w-full">
+
 
         {activeSite === "spacex" ? (
-          <TabSwitcher starlinkData={starlinkData} />
+          <TabSwitcher starlinkData={starlinkData} siteToggle={siteToggle} />
         ) : (
-          <TeslaTabSwitcher incidents={robotaxiIncidents} />
+          <TeslaTabSwitcher robotaxiData={robotaxiData} siteToggle={siteToggle} />
         )}
       </div>
 

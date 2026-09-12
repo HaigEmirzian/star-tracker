@@ -5,17 +5,27 @@ import {
   getUpcomingStarlinkLaunches,
 } from "@/lib/data/launchLibrary";
 import { getRobotaxiIncidentData } from "@/lib/data/nhtsaRobotaxi";
+import { getRobotaxiNews } from "@/lib/data/robotaxiNews";
+import { getTxdmvFleetData } from "@/lib/data/txdmvFleet";
 import { futureFeaturesEnabled } from "@/lib/flags";
 
 export default async function Home() {
-  const [starlinkData, upcomingLaunches, recentLaunches, robotaxiIncidents] =
-    await Promise.all([
-      getStarlinkData(),
-      getUpcomingStarlinkLaunches(),
-      getRecentStarlinkLaunches(),
-      // Tesla side is flag-gated — skip the NHTSA fetch entirely when it's off.
-      futureFeaturesEnabled ? getRobotaxiIncidentData() : Promise.resolve(null),
-    ]);
+  const [
+    starlinkData,
+    upcomingLaunches,
+    recentLaunches,
+    robotaxiIncidents,
+    robotaxiNews,
+    robotaxiFleet,
+  ] = await Promise.all([
+    getStarlinkData(),
+    getUpcomingStarlinkLaunches(),
+    getRecentStarlinkLaunches(),
+    // Tesla side is flag-gated — skip all three Tesla fetches when it's off.
+    futureFeaturesEnabled ? getRobotaxiIncidentData() : Promise.resolve(null),
+    futureFeaturesEnabled ? getRobotaxiNews() : Promise.resolve(null),
+    futureFeaturesEnabled ? getTxdmvFleetData() : Promise.resolve(null),
+  ]);
 
   return (
     <div className="relative flex min-h-screen flex-col">
@@ -27,7 +37,11 @@ export default async function Home() {
             upcomingLaunches,
             recentLaunches,
           }}
-          robotaxiIncidents={robotaxiIncidents}
+          robotaxiData={{
+            incidents: robotaxiIncidents,
+            news: robotaxiNews,
+            fleet: robotaxiFleet,
+          }}
         />
       </main>
     </div>

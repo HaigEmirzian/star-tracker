@@ -13,7 +13,13 @@ toggle over an animated starfield background — no routing, no database.
 
 A separate top-right **Site toggle** (logo-only, SpaceX vs Tesla) switches the
 whole tab set: SpaceX is the tracker described above; Tesla currently has one
-tab, **Robotaxi**, tracking Tesla's driverless ride-hailing rollout.
+tab, **Robotaxi**, a dense terminal-style dashboard of Tesla's driverless
+ride-hailing rollout — deployment, mileage, safety reporting, regulatory
+posture, a live news scanner, and a clearly-labelled derived revenue model.
+Unlike the SpaceX panels (which are centred at `max-w-3xl`/`max-w-4xl`), it
+runs a wide 12-column grid at `max-w-[1600px]` with a tighter type/padding
+scale. That width is set on the panel's own root — `<main>` has no max-width
+and the shell isn't shared — so nothing about it touches the SpaceX side.
 
 **The entire Tesla side is gated behind `futureFeaturesEnabled`**
 (`lib/flags.ts`, driven by the `NEXT_PUBLIC_FUTURE_FEATURES` env var). When
@@ -128,18 +134,50 @@ mismatch against the client's actual time (see the `useNow()` hook in
   roughly monthly, hence the 24h revalidate window. Never ship the raw
   multi-MB CSV to the client — parse and filter server-side only, same
   reasoning as the Starlink Data-Cache size limit above.
+- `robotaxiNews.ts` — the second **live** Tesla source: a news scanner
+  reading publisher RSS (Electrek, Teslarati, TechCrunch) directly, with the
+  same disk-guard/coalescing/fail-open pattern as `nhtsaRobotaxi.ts` at a
+  30-minute revalidate. **Feed content is untrusted third-party input.** Only
+  four fields ever reach the client — `title`, `link`, `publishedAt`, and a
+  `sourceLabel` that comes from our own `NEWS_SOURCES` table, never the
+  feed's own `<title>`. `description`/`content:encoded`/`dc:creator` are
+  never read at all, so there is no untrusted-HTML surface to sanitise;
+  keyword matching runs on titles only. Titles are tag-stripped and capped,
+  links must parse and must be `https:` (this is what blocks `javascript:`
+  and `data:`), dates more than 48h in the future are dropped. Never render
+  any of it with `dangerouslySetInnerHTML`. Do not swap in Google News RSS —
+  it returns 200 but its terms restrict it to personal, non-commercial feed
+  readers, which a deployed site is not; GDELT rate-limits without a key.
+  One failing feed degrades to a status row and its last-good items, never a
+  blank module.
 - `robotaxiStatic.ts` — manually maintained, cited data for everything Tesla
-  only discloses quarterly or that's otherwise slow-changing (cumulative
-  miles, per-city launch/status, FSD build version, notable sightings). Same
-  discipline as `dealsStatic.ts`/`starmindStatic.ts`: every figure needs a
-  real source URL, update `robotaxiLastUpdated` by hand as new figures land.
-  Ride counts, fares, per-ride revenue, exact live fleet size, and
-  disengagement rate are **not publicly disclosed** by Tesla and have no
-  credible third-party measurement — `notDisclosed` lists these explicitly
-  rather than the UI guessing at them. `notableSightings` is a small
-  hand-curated highlight list (not a live per-vehicle registry — that would
-  need a database and a scraping pipeline this project deliberately doesn't
-  run).
+  only discloses quarterly or that's otherwise slow-changing (cumulative and
+  quarterly miles, per-city launch/status, fleet observations, Cybercab
+  production, FSD figures, regulatory actions). Same discipline as
+  `dealsStatic.ts`/`starmindStatic.ts`: every figure needs a real source URL,
+  update `robotaxiLastUpdated` by hand as new figures land. Ride counts,
+  fares, per-ride revenue, exact live fleet size, and disengagement rate are
+  **not publicly disclosed** by Tesla and have no credible third-party
+  measurement — `notDisclosed` lists these explicitly rather than the UI
+  guessing at them. **Two different fleet measures circulate in coverage and
+  must never share a series:** official TxDMV *registrations*
+  (`texasFleetObservations`, 42 → 420) and unofficial crowdsourced counts of
+  vehicles *seen operating* unsupervised (`observedUnsupervisedVehicles`).
+  An earlier version of this file conflated them. There is also deliberately
+  no incidents-per-mile figure anywhere: NHTSA's reports cover all Tesla ADS
+  operation while Tesla's mileage covers paid miles only, so dividing them
+  invents a denominator.
+- `robotaxiEconomics.ts` — inputs for the Robotaxi revenue model, and the one
+  place a number Tesla never disclosed may appear. Every input carries a
+  `kind` (`disclosed` / `reported` / `assumption`) that governs how much
+  weight the UI lets it bear; if you can't put a real URL on it, it's an
+  `assumption`. The dividing line, enforced in `lib/citations.ts`: arithmetic
+  over two *disclosed* figures is a normal metric, but anything needing a
+  non-disclosed input is **derived** and may only render inside
+  `RobotaxiRevenueModel.tsx`'s separate visual register (dashed amber border,
+  a `DERIVED` label, the arithmetic printed under each output) — never in the
+  KPI strip, never beside disclosed data in a chart, never written back into
+  `robotaxiStatic.ts`.
 
 **Styling:** Tailwind CSS v4, dark-only (space theme — black background,
 white text), no light-mode variant. `components/Starfield.tsx` is a
