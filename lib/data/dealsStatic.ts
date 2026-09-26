@@ -143,10 +143,10 @@ export const dealsRollup = {
     note: "Total company revenue, up from $4B in Q2 2025",
   } as CitedFigure<number>,
   colossusGpuCount: {
-    value: 555_000,
-    source: "https://introl.com/blog/xai-colossus-2-gigawatt-expansion-555k-gpus-january-2026",
-    sourceLabel: "Introl — xAI Colossus 2GW expansion (estimate)",
-    note: "Estimate, not an official disclosure: combined Nvidia GPU count across all three Colossus buildings as reported ~Jan 2026, when xAI (now under SpaceX after its Feb 2026 acquisition) purchased a third building. Confirmed per-building figures tied to specific leases are lower and more solid: 220,000+ at Colossus 1 (Anthropic) and 110,000 at Colossus 2 (Google) — see the deal cards below.",
+    value: 780_000,
+    source: "https://x.com/elonmusk/status/2103329761690865846",
+    sourceLabel: "Elon Musk — Colossus GPU inventory disclosure",
+    note: "Company claim on Sep 25, 2026: 230,000 GPUs at Colossus 1 (150K H100, 50K H200, 30K GB200) plus 550,000 at Colossus 2 (110K GB200, 440K GB300). Excludes 220K GB300 forecast for next week, 220K for November, and a conditional further 220K by late December because those were not yet operational.",
   } as CitedFigure<number>,
   colossusCapacityGw: {
     value: 2,
@@ -162,4 +162,4 @@ export const dealsRollup = {
   } as CitedFigure<number>,
 };
 
-export const dealsLastUpdated = "2026-08-20";
+export const dealsLastUpdated = "2026-09-25";
