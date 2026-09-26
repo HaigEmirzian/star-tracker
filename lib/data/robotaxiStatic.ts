@@ -200,6 +200,17 @@ export const texasFleetObservations: FleetObservation[] = [
       note: "420 Tesla autonomous vehicles registered in Texas: 375 Model Y plus 45 Cybercab. Registrations, not vehicles actively carrying passengers.",
     },
   },
+  {
+    date: "2026-09-26",
+    modelY: 420,
+    cybercab: 126,
+    total: {
+      value: 546,
+      source: "https://www.teslaoracle.com/2026/09/26/tesla-robotaxi-and-cybercab-fleet-in-texas-surpasses-the-500-mark-420-126/",
+      sourceLabel: "Tesla Oracle — Texas fleet passes 500 registrations",
+      note: "TexasAVTracker aggregation of TxDMV records: 420 Model Y plus 126 Cybercab. Registrations are a legal fleet proxy, not proof every vehicle is actively carrying passengers.",
+    },
+  },
 ];
 
 export const texasFleetLatest = texasFleetObservations[texasFleetObservations.length - 1];
@@ -209,10 +220,10 @@ export const texasFleetLatest = texasFleetObservations[texasFleetObservations.le
 export const texasFleetCount: CitedFigure<number> = texasFleetLatest.total;
 
 export const cybercabFleetCount: CitedFigure<number> = {
-  value: 45,
-  source: "https://thechargeport.com/robotaxi-tracker",
-  sourceLabel: "The Chargeport — robotaxi status tracker",
-  note: "Cybercabs registered in Texas as of 2026-09-02, up from the first 7 registered on 2026-08-31.",
+  value: 126,
+  source: "https://www.teslaoracle.com/2026/09/26/tesla-robotaxi-and-cybercab-fleet-in-texas-surpasses-the-500-mark-420-126/",
+  sourceLabel: "Tesla Oracle — Texas fleet passes 500 registrations",
+  note: "Cybercabs registered in Texas as of 2026-09-26, up from 45 on 2026-09-02. Registrations are not proof every vehicle is actively carrying passengers.",
 };
 
 // The unofficial counterpart to the registration figures above. Separate
@@ -567,4 +578,4 @@ export const notDisclosed = [
   "Incidents per mile — NHTSA's ADS reports cover all Tesla autonomous operation while Tesla's mileage figures cover paid miles only, so the two cannot be divided into a rate",
 ];
 
-export const robotaxiLastUpdated = "2026-09-06";
+export const robotaxiLastUpdated = "2026-09-26";
