@@ -174,9 +174,9 @@ export interface FleetObservation {
   total: CitedFigure<number>;
 }
 
-// Official TxDMV registration counts only. Two observations, three months
-// apart — do NOT interpolate between them, and do not add a point unless the
-// source explicitly attributes it to TxDMV registration data.
+// Official TxDMV registration counts only. Do NOT interpolate between
+// observations, and do not add a point unless the source explicitly
+// attributes it to TxDMV registration data.
 export const texasFleetObservations: FleetObservation[] = [
   {
     date: "2026-06-02",
@@ -211,6 +211,17 @@ export const texasFleetObservations: FleetObservation[] = [
       note: "TexasAVTracker aggregation of TxDMV records: 420 Model Y plus 126 Cybercab. Registrations are a legal fleet proxy, not proof every vehicle is actively carrying passengers.",
     },
   },
+  {
+    date: "2026-10-02",
+    modelY: 420,
+    cybercab: 158,
+    total: {
+      value: 578,
+      source: "https://aishiftnews.ca/robotaxi-radar/",
+      sourceLabel: "AI Shift News — TxDMV Robotaxi roster monitor",
+      note: "Two matching reads of the official TxDMV roster found 420 Model Y plus 158 Cybercabs across 578 unique VINs. Registrations are a legal fleet proxy, not proof every vehicle is actively carrying passengers.",
+    },
+  },
 ];
 
 export const texasFleetLatest = texasFleetObservations[texasFleetObservations.length - 1];
@@ -220,10 +231,10 @@ export const texasFleetLatest = texasFleetObservations[texasFleetObservations.le
 export const texasFleetCount: CitedFigure<number> = texasFleetLatest.total;
 
 export const cybercabFleetCount: CitedFigure<number> = {
-  value: 126,
-  source: "https://www.teslaoracle.com/2026/09/26/tesla-robotaxi-and-cybercab-fleet-in-texas-surpasses-the-500-mark-420-126/",
-  sourceLabel: "Tesla Oracle — Texas fleet passes 500 registrations",
-  note: "Cybercabs registered in Texas as of 2026-09-26, up from 45 on 2026-09-02. Registrations are not proof every vehicle is actively carrying passengers.",
+  value: 158,
+  source: "https://aishiftnews.ca/robotaxi-radar/",
+  sourceLabel: "AI Shift News — TxDMV Robotaxi roster monitor",
+  note: "Cybercabs registered in Texas as of 2026-10-02, up from 126 on 2026-09-26. Registrations are not proof every vehicle is actively carrying passengers.",
 };
 
 // The unofficial counterpart to the registration figures above. Separate
@@ -578,4 +589,4 @@ export const notDisclosed = [
   "Incidents per mile — NHTSA's ADS reports cover all Tesla autonomous operation while Tesla's mileage figures cover paid miles only, so the two cannot be divided into a rate",
 ];
 
-export const robotaxiLastUpdated = "2026-09-26";
+export const robotaxiLastUpdated = "2026-10-02";
