@@ -222,6 +222,17 @@ export const texasFleetObservations: FleetObservation[] = [
       note: "Two matching reads of the official TxDMV roster found 420 Model Y plus 158 Cybercabs across 578 unique VINs. Registrations are a legal fleet proxy, not proof every vehicle is actively carrying passengers.",
     },
   },
+  {
+    date: "2026-10-03",
+    modelY: 420,
+    cybercab: 169,
+    total: {
+      value: 589,
+      source: "https://txmccs.txdmv.gov/truckstop/companies/81edcff1-8a6e-4ed0-be1f-60668515e223/automated-motor-vehicles",
+      sourceLabel: "TxDMV — Tesla Robotaxi automated-vehicle roster",
+      note: "Direct count of the official TxDMV roster: 420 Model Y plus 169 Cybercabs across 589 registrations. Registrations are a legal fleet proxy, not proof every vehicle is actively carrying passengers.",
+    },
+  },
 ];
 
 export const texasFleetLatest = texasFleetObservations[texasFleetObservations.length - 1];
@@ -231,10 +242,10 @@ export const texasFleetLatest = texasFleetObservations[texasFleetObservations.le
 export const texasFleetCount: CitedFigure<number> = texasFleetLatest.total;
 
 export const cybercabFleetCount: CitedFigure<number> = {
-  value: 158,
-  source: "https://aishiftnews.ca/robotaxi-radar/",
-  sourceLabel: "AI Shift News — TxDMV Robotaxi roster monitor",
-  note: "Cybercabs registered in Texas as of 2026-10-02, up from 126 on 2026-09-26. Registrations are not proof every vehicle is actively carrying passengers.",
+  value: 169,
+  source: "https://txmccs.txdmv.gov/truckstop/companies/81edcff1-8a6e-4ed0-be1f-60668515e223/automated-motor-vehicles",
+  sourceLabel: "TxDMV — Tesla Robotaxi automated-vehicle roster",
+  note: "Cybercabs registered in Texas as of 2026-10-03, up from 158 on 2026-10-02. Registrations are not proof every vehicle is actively carrying passengers.",
 };
 
 // The unofficial counterpart to the registration figures above. Separate
@@ -589,4 +600,4 @@ export const notDisclosed = [
   "Incidents per mile — NHTSA's ADS reports cover all Tesla autonomous operation while Tesla's mileage figures cover paid miles only, so the two cannot be divided into a rate",
 ];
 
-export const robotaxiLastUpdated = "2026-10-02";
+export const robotaxiLastUpdated = "2026-10-03";
