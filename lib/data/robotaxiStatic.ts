@@ -555,9 +555,9 @@ export const regulatoryActions: RegulatoryAction[] = [
     status: "open",
     opened: "2026-09-04",
     scope:
-      "Open Audit Query into how Tesla certified a vehicle with no steering wheel or pedals for public roads. Opened hours after the first public Cybercab rides began in Austin.",
-    source: "https://techcrunch.com/2026/09/04/feds-launch-investigation-into-teslas-cybercab-deployment/",
-    sourceLabel: "TechCrunch — Feds investigate Cybercab deployment",
+      "Open Audit Query into how Tesla certified a vehicle with no steering wheel or pedals for public roads. On 2026-09-15, NHTSA published an information order asking whether temporarily installed human-driver controls or other equipment formed part of Tesla's certification basis. The order is a request for information, not a noncompliance finding or recall.",
+    source: "https://www.wsj.com/business/autos/regulators-press-tesla-on-whether-cybercab-may-have-option-for-human-control-6f07ddeb",
+    sourceLabel: "Wall Street Journal — NHTSA presses Tesla on temporary controls",
   },
   {
     id: "fsd-ea",
