@@ -48,8 +48,11 @@ export const robotaxiCities: RobotaxiCityStatus[] = [
       source: "https://www.cnbc.com/2026/05/28/tesla-robotaxi-fleet-texas-one-tenth-size-of-waymos-filings-reveal.html",
       sourceLabel: "CNBC — Tesla Robotaxi Texas fleet filings",
     },
+    // Oct. 17 app notification, reproduced and cross-checked in reporting:
+    // https://driveteslacanada.ca/news/tesla-cybercab-midnight-operating-hours-austin/
+    // https://www.notateslaapp.com/news/4844/tesla-extends-robotaxi-hours-again-now-until-midnight
     notes:
-      "First city to run unsupervised, and the only one carrying Cybercabs — public Cybercab rides opened in a limited Austin geofence on 2026-09-04.",
+      "First city to run unsupervised, and the only one carrying Cybercabs — public Cybercab rides opened in a limited Austin geofence on 2026-09-04. On 2026-10-17, Tesla app notifications reported Cybercab rides available until midnight local time; this is not 24/7 service.",
   },
   {
     id: "dallas",
@@ -600,4 +603,4 @@ export const notDisclosed = [
   "Incidents per mile — NHTSA's ADS reports cover all Tesla autonomous operation while Tesla's mileage figures cover paid miles only, so the two cannot be divided into a rate",
 ];
 
-export const robotaxiLastUpdated = "2026-10-03";
+export const robotaxiLastUpdated = "2026-10-17";
