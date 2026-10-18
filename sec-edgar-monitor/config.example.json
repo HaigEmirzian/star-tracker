@@ -1,0 +1,24 @@
+{
+  "user_agent": "Your Name SECMonitor your-real-email@example.com",
+  "poll_seconds": 20,
+  "request_spacing_seconds": 1.0,
+  "timeout_seconds": 15,
+  "companies": {
+    "0001318605": "Tesla, Inc.",
+    "0001181412": "Space Exploration Technologies Corp."
+  },
+  "alert_all_new": true,
+  "scan_documents": true,
+  "scan_max_bytes": 8388608,
+  "priority_forms": ["8-K", "6-K", "S-4", "F-4", "425", "PREM14A", "DEFM14A", "SC TO-T", "SC TO-I", "SC 14D9", "SC 13E3"],
+  "keywords": ["merger", "agreement and plan of merger", "business combination", "acquisition", "tender offer", "exchange offer", "change of control"],
+  "smtp": {
+    "host": "smtp.example.com",
+    "port": 587,
+    "security": "starttls",
+    "username": "your-email@example.com",
+    "password_env": "SEC_SMTP_PASSWORD",
+    "from": "your-email@example.com",
+    "to": ["your-email@example.com"]
+  }
+}

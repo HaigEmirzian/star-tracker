@@ -55,3 +55,7 @@ Robotaxi tracker and its SpaceX/Tesla site toggle. Off by default.
 ## Deploy
 
 Push to GitHub and import the repo at [vercel.com/new](https://vercel.com/new) — no environment variables or database setup required for v1.
+
+## Subprojects
+
+- [SEC EDGAR monitor](./sec-edgar-monitor/README.md) — standalone Windows Python monitor for Tesla and SpaceX filings, with email alerts, SQLite deduplication, RSS/JSON benchmarking, and Task Scheduler setup. Runs separately from the web app.
