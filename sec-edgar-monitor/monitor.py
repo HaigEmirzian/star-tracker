@@ -5,6 +5,7 @@ Keep the window open and PC awake.Filing history and logs are saved in state/
 beside this script. Standard library only; Python must include tkinter, SQLite and SSL.
 """
 import datetime as dt
+import atexit
 import email.utils
 from email.message import EmailMessage
 import html
@@ -308,6 +309,17 @@ def run_worker(command, cfg):
         time.sleep(max(1, cfg["poll_seconds"] - elapsed))
 
 
+def watch_window():
+    """The window owns this pipe; EOF means it exited, even after a crash."""
+    try:
+        while sys.stdin.read(1):
+            pass
+    finally:
+        # Exit even when a network request is blocked. SQLite recovers unfinished
+        # transactions on restart, and the OS releases the singleton port.
+        os._exit(0)
+
+
 DEFAULT_CONFIG = {'user_agent': '',
  'poll_seconds': 20,
  'request_spacing_seconds': 1.0,
@@ -501,6 +513,7 @@ class App:
                   'Alerts flag filings for review; they do not confirm a merger.').grid(
             row=11, column=0, columnspan=2, sticky='w', pady=(12, 0))
         window.protocol('WM_DELETE_WINDOW', self.close)
+        atexit.register(self.shutdown_process)
         window.after(100, self.drain)
 
     def toggle_advanced(self):
@@ -558,13 +571,12 @@ class App:
                 cwd=ROOT, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, encoding='utf-8', errors='replace',
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
-            self.process.stdin.write(json.dumps(self.cfg))
-            self.process.stdin.close()
+            # Keep stdin open as a lifetime connection to the worker.
+            self.process.stdin.write(json.dumps(self.cfg) + '\n')
+            self.process.stdin.flush()
         except OSError as exc:
-            if self.process is not None:
-                self.process.terminate()
-                self.process.wait()
-                self.process = None
+            self.shutdown_process()
+            self.process = None
             messagebox.showerror('Unable to start', str(exc), parent=self.window)
             return
         self.stopping = False
@@ -580,6 +592,7 @@ class App:
                 self.events.put(('line', line))
         finally:
             process.stdout.close()
+            process.stdin.close()
             self.events.put(('done', process.wait()))
 
     def drain(self):
@@ -613,11 +626,26 @@ class App:
             self.status.set('Stopping...')
             self.stop_button.configure(state='disabled')
 
+    def shutdown_process(self):
+        process = self.process
+        if process is None:
+            return
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=3)
+        if process.stdin is not None:
+            process.stdin.close()
+
     def close(self):
-        self.stop()
-        if self.process is not None:
-            self.process.wait(timeout=5)
-        self.window.destroy()
+        try:
+            self.shutdown_process()
+        finally:
+            atexit.unregister(self.shutdown_process)
+            self.window.destroy()
 
 
 def open_window():
@@ -630,13 +658,18 @@ def open_window():
         window.destroy()
     else:
         window.deiconify()
-        window.mainloop()
+        try:
+            window.mainloop()
+        finally:
+            app.shutdown_process()
 
 
 if __name__ == '__main__':
     if len(sys.argv) == 3 and sys.argv[1] == '--worker':
         try:
-            run_worker(sys.argv[2], validate_config(json.load(sys.stdin)))
+            cfg = validate_config(json.loads(sys.stdin.readline()))
+            threading.Thread(target=watch_window, daemon=True).start()
+            run_worker(sys.argv[2], cfg)
         except KeyboardInterrupt:
             pass
     else:
