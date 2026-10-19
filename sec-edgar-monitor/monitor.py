@@ -1,6 +1,9 @@
-"""Conservative EDGAR monitor. Python 3.11+, standard library only."""
-import argparse
-import csv
+"""Tesla + SpaceX SEC monitor. Run this file with Python 3.9+ to open setup.
+
+Enter your email, SMTP server and app password, test email, then start.
+Keep the window open and PC awake.Filing history and logs are saved in state/
+beside this script. Standard library only; Python must include tkinter, SQLite and SSL.
+"""
 import datetime as dt
 import email.utils
 from email.message import EmailMessage
@@ -16,12 +19,18 @@ import smtplib
 import socket
 import sqlite3
 import ssl
-import statistics
+import sys
 import time
 import urllib.error
-import urllib.parse
 import urllib.request
-import xml.etree.ElementTree as ET
+
+import copy
+import queue
+import subprocess
+import threading
+import tkinter as tk
+from tkinter import messagebox, ttk
+from tkinter.scrolledtext import ScrolledText
 
 LOG = logging.getLogger("edgar")
 ACC = re.compile(r"\d{10}-\d{2}-\d{6}")
@@ -31,8 +40,7 @@ def utc():
     return dt.datetime.now(dt.timezone.utc).isoformat()
 
 
-def load_config(path):
-    cfg = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+def validate_config(cfg):
     ua = cfg.get("user_agent", "")
     if not re.search(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", ua) or "example" in ua.lower() or "your" in ua.lower():
         raise ValueError("Set user_agent to your actual name/application and contact email")
@@ -102,11 +110,6 @@ def submissions_url(cik):
     return f"https://data.sec.gov/submissions/CIK{cik}.json"
 
 
-def rss_url(cik):
-    return "https://www.sec.gov/cgi-bin/browse-edgar?" + urllib.parse.urlencode({
-        "action": "getcompany", "CIK": cik, "owner": "include", "count": 100, "output": "atom"})
-
-
 def parse_submissions(data, cik):
     obj = json.loads(data)
     if int(obj["cik"]) != int(cik):
@@ -124,20 +127,6 @@ def parse_submissions(data, cik):
         result.append({"cik": cik, "name": obj["name"], "acc": acc,
                        "form": rows["form"][i], "date": rows["filingDate"][i],
                        "index": root + acc + "-index.html", "text": root + acc + ".txt"})
-    return result
-
-
-def parse_rss(data):
-    root = ET.fromstring(data)
-    ns = {"a": "http://www.w3.org/2005/Atom"}
-    if root.tag != "{http://www.w3.org/2005/Atom}feed":
-        raise ValueError("Expected Atom feed")
-    result = set()
-    for entry in root.findall("a:entry", ns):
-        match = ACC.search(ET.tostring(entry, encoding="unicode"))
-        if not match:
-            raise ValueError("Atom entry lacks accession")
-        result.add(match.group())
     return result
 
 
@@ -186,7 +175,7 @@ class Store:
             LOG.info("Baseline %s: %d existing filings; no historical emails", cik, len(rows))
 
     def alert(self, row, kind, reasons):
-        subject = f"[EDGAR {'REVIEW' if reasons else 'NEW'}] {row['name']} {row['form']} {row['acc']}"
+        subject = "BREAKING NEWS: Tesla/SpaceX Merger Filed"
         body = (f"Observed UTC: {utc()}\nCompany: {row['name']}\nCIK: {row['cik']}\n"
                 f"Form: {row['form']}\nFiled: {row['date']}\nAccession: {row['acc']}\n"
                 f"Reasons: {', '.join(reasons) or 'new filing'}\n{row['index']}\n\n"
@@ -258,60 +247,8 @@ def flush(store, cfg):
             LOG.info("Email accepted by SMTP: outbox %s", ident)
 
 
-def benchmark(client, cfg, directory, rounds):
-    directory.mkdir(parents=True, exist_ok=True)
-    seen, baseline, timings, initialized_sources = {}, set(), {}, set()
-    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-    with (directory / f"requests-{stamp}.csv").open("w", newline="", encoding="utf-8") as rf, (directory / f"visibility-{stamp}.csv").open("w", newline="", encoding="utf-8") as vf:
-        rw, vw = csv.writer(rf), csv.writer(vf)
-        rw.writerow(["utc", "round", "cik", "source", "seconds", "bytes", "count", "status"])
-        vw.writerow(["cik", "accession", "json_first_utc", "rss_first_utc", "rss_minus_json_seconds"])
-        for n in range(rounds):
-            start = time.monotonic()
-            for cik in cfg["companies"]:
-                sources = ["json", "rss"] if n % 2 == 0 else ["rss", "json"]
-                for source in sources:
-                    before = time.monotonic()
-                    try:
-                        data, truncated = client.get(submissions_url(cik) if source == "json" else rss_url(cik))
-                        if truncated:
-                            raise ValueError("Truncated response")
-                        ids = {r["acc"] for r in parse_submissions(data, cik)} if source == "json" else parse_rss(data)
-                        elapsed = time.monotonic() - before
-                        timings.setdefault(source, []).append(elapsed)
-                        rw.writerow([utc(), n, cik, source, round(elapsed, 4), len(data), len(ids), "ok"])
-                        for acc in ids:
-                            key = (cik, acc)
-                            if (cik, source) not in initialized_sources:
-                                baseline.add(key)
-                            seen.setdefault(key, {}).setdefault(source, time.time())
-                        initialized_sources.add((cik, source))
-                    except Exception as exc:
-                        rw.writerow([utc(), n, cik, source, round(time.monotonic()-before, 4), "", "", type(exc).__name__])
-                        LOG.warning("Benchmark %s %s unavailable: %s", cik, source, type(exc).__name__)
-                    rf.flush()
-            if n + 1 < rounds:
-                time.sleep(max(0, cfg["poll_seconds"] - (time.monotonic()-start)))
-        for (cik, acc), observations in sorted(seen.items()):
-            if (cik, acc) in baseline:
-                continue
-            j, r = observations.get("json"), observations.get("rss")
-            fmt = lambda t: dt.datetime.fromtimestamp(t, dt.timezone.utc).isoformat() if t else ""
-            vw.writerow([cik, acc, fmt(j), fmt(r), round(r-j, 3) if j and r else ""])
-    for source, samples in timings.items():
-        LOG.info("%s successful requests=%d median=%.3fs max=%.3fs (includes local pacing)", source, len(samples), statistics.median(samples), max(samples))
-    LOG.info("Benchmark saved to %s; each source's initial snapshot excluded from visibility results", directory)
-
-
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["run", "once", "benchmark", "test-email", "status"])
-    parser.add_argument("--config", default="config.json")
-    parser.add_argument("--rounds", type=int, default=30)
-    args = parser.parse_args()
-    config_path = Path(args.config).resolve()
-    cfg = load_config(config_path)
-    root = config_path.parent
+def run_worker(command, cfg):
+    root = ROOT
     state = root / "state"
     state.mkdir(exist_ok=True)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", handlers=[
@@ -320,7 +257,7 @@ def main():
     lock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
         lock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
-    if args.command != "status":
+    if command != "status":
         try:
             lock.bind(("127.0.0.1", 48137))
         except OSError:
@@ -334,21 +271,16 @@ def main():
         store.db.execute("INSERT INTO identity VALUES(?)", (uuid.uuid4().hex,))
         store.db.commit()
     store.instance_id = store.db.execute("SELECT id FROM identity").fetchone()[0]
-    if args.command == "status":
+    if command == "status":
         print("Pending emails:", store.db.execute("SELECT COUNT(*) FROM outbox WHERE sent_at IS NULL").fetchone()[0])
         print("Pending scans:", store.db.execute("SELECT COUNT(*) FROM filings WHERE scan_done=0").fetchone()[0])
         return
-    if args.command == "test-email":
+    if command == "test-email":
         with store.db:
             store.enqueue("test:" + utc(), "[EDGAR TEST] SMTP setup check", "Your SEC monitor SMTP test. " + utc())
         flush(store, cfg)
         if store.db.execute("SELECT COUNT(*) FROM outbox WHERE sent_at IS NULL").fetchone()[0]:
             raise SystemExit("Some emails remain pending; inspect state/monitor.log")
-        return
-    if args.command == "benchmark":
-        if not 1 <= args.rounds <= 100000:
-            raise SystemExit("rounds must be 1-100000")
-        benchmark(client, cfg, root / "benchmark", args.rounds)
         return
     while True:
         start = time.monotonic()
@@ -367,7 +299,7 @@ def main():
         flush(store, cfg)  # Send metadata alerts before slower document enrichment.
         store.scan(client, cfg)
         flush(store, cfg)
-        if args.command == "once":
+        if command == "once":
             if poll_errors:
                 raise SystemExit("One or more company polls failed; inspect state/monitor.log")
             return
@@ -377,8 +309,296 @@ def main():
         time.sleep(max(1, cfg["poll_seconds"] - elapsed))
 
 
-if __name__ == "__main__":
+DEFAULT_CONFIG = {'user_agent': '',
+ 'poll_seconds': 20,
+ 'request_spacing_seconds': 1.0,
+ 'timeout_seconds': 15,
+ 'companies': {'0001318605': 'Tesla, Inc.', '0001181412': 'Space Exploration Technologies Corp.'},
+ 'alert_all_new': True,
+ 'scan_documents': True,
+ 'scan_max_bytes': 8388608,
+ 'priority_forms': ['8-K',
+                    '6-K',
+                    'S-4',
+                    'F-4',
+                    '425',
+                    'PREM14A',
+                    'DEFM14A',
+                    'SC TO-T',
+                    'SC TO-I',
+                    'SC 14D9',
+                    'SC 13E3'],
+ 'keywords': ['merger',
+              'agreement and plan of merger',
+              'business combination',
+              'acquisition',
+              'tender offer',
+              'exchange offer',
+              'change of control'],
+ 'smtp': {'host': '',
+          'port': 587,
+          'security': 'starttls',
+          'username': '',
+          'password_env': 'SEC_SMTP_PASSWORD',
+          'from': '',
+          'to': []}}
+
+ROOT = Path(__file__).resolve().parent
+
+
+def saved_credentials(path):
+    """Read only the two monitor values; never execute or expand file contents."""
+    values = {}
+    if path.exists():
+        for line in path.read_text(encoding='utf-8-sig').splitlines():
+            key, separator, value = line.strip().partition('=')
+            key = key.strip()
+            if separator and key in ('SEC_EMAIL', 'SEC_SMTP_PASSWORD'):
+                value = value.strip()
+                if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+                    value = value[1:-1]
+                values[key] = value
+    return {key: os.environ.get(key) or values.get(key, '')
+            for key in ('SEC_EMAIL', 'SEC_SMTP_PASSWORD')}
+
+
+PROVIDERS = {
+    'gmail.com': ('Gmail', 'smtp.gmail.com', 587, 'starttls'),
+    'googlemail.com': ('Gmail', 'smtp.gmail.com', 587, 'starttls'),
+    'yahoo.com': ('Yahoo', 'smtp.mail.yahoo.com', 465, 'ssl'),
+    'icloud.com': ('iCloud', 'smtp.mail.me.com', 587, 'starttls'),
+    'me.com': ('iCloud', 'smtp.mail.me.com', 587, 'starttls'),
+    'mac.com': ('iCloud', 'smtp.mail.me.com', 587, 'starttls'),
+}
+
+
+def session_config(base, values):
+    """Use one email for SEC contact, sending, login, and receiving alerts."""
+    cfg = copy.deepcopy(base)
+    email = values['contact'].strip()
+    if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+        raise ValueError('Enter a valid email address.')
+    cfg['user_agent'] = 'PersonalSECMonitor ' + email
+    smtp = cfg['smtp']
+    smtp.update(username=email, **{'from': email, 'to': [email]})
+    for key in ('host', 'security'):
+        smtp[key] = values[key].strip()
+    if not smtp['host']:
+        raise ValueError('Could not detect your email provider. Open Advanced and enter its mail server settings.')
+    smtp['port'] = int(values['port'])
+    if not 1 <= smtp['port'] <= 65535:
+        raise ValueError('Mail server port must be between 1 and 65535.')
+    return validate_config(cfg)
+
+
+class App:
+    def __init__(self, window):
+        self.window = window
+        self.process = None
+        self.events = queue.Queue()
+        self.stopping = False
+        self.command = None
+        self.cfg = copy.deepcopy(DEFAULT_CONFIG)
+        window.title('Tesla + SpaceX SEC Monitor')
+        window.geometry('780x600')
+        panel = ttk.Frame(window, padding=18)
+        panel.pack(fill='both', expand=True)
+        panel.columnconfigure(1, weight=1)
+        ttk.Label(panel, text='Tesla + SpaceX SEC Monitor', font=('Segoe UI', 18, 'bold')).grid(
+            row=0, column=0, columnspan=2, sticky='w')
+        ttk.Label(panel, text='Set up email, test delivery, then start. Keep this window open and your PC awake.').grid(
+            row=1, column=0, columnspan=2, sticky='w', pady=(6, 14))
+        self.fields = {}
+        self.inputs = []
+
+        def field(parent, row, key, label, default=''):
+            ttk.Label(parent, text=label).grid(row=row, column=0, sticky='w', padx=(0, 14), pady=5)
+            var = tk.StringVar(value=str(default))
+            self.fields[key] = var
+            if key == 'security':
+                entry = ttk.Combobox(parent, textvariable=var, values=('starttls', 'ssl'), state='readonly')
+            else:
+                entry = ttk.Entry(parent, textvariable=var, show='*' if key == 'password' else '')
+            entry.grid(row=row, column=1, sticky='ew', pady=5)
+            self.inputs.append((entry, key))
+
+        field(panel, 2, 'contact', 'Email')
+        field(panel, 3, 'password', 'App password')
+        self.provider_hint = tk.StringVar(value='Server settings are automatic for Gmail, Yahoo, and iCloud.')
+        ttk.Label(panel, textvariable=self.provider_hint, wraplength=700).grid(
+            row=4, column=0, columnspan=2, sticky='w', pady=6)
+        self.advanced = ttk.Frame(panel)
+        self.advanced.grid(row=6, column=0, columnspan=2, sticky='ew')
+        self.advanced.columnconfigure(1, weight=1)
+        field(self.advanced, 0, 'host', 'Mail server')
+        field(self.advanced, 1, 'port', 'Port', 587)
+        field(self.advanced, 2, 'security', 'Connection', 'starttls')
+        self.advanced.grid_remove()
+        self.advanced_button = ttk.Button(panel, text='Advanced', command=self.toggle_advanced)
+        self.advanced_button.grid(row=5, column=0, columnspan=2, sticky='w', pady=4)
+        self.fields['contact'].trace_add('write', self.fill_email)
+        credentials = saved_credentials(ROOT.parent / '.env')
+        self.fields['contact'].set(credentials['SEC_EMAIL'])
+        self.fields['password'].set(credentials['SEC_SMTP_PASSWORD'])
+        ttk.Label(panel, text='Alerts go to the same email. Optional saved credentials load from the repo .env.\n'
+                  'Use an app password from your email account settings, not your usual sign-in password.',
+                  wraplength=700).grid(row=7, column=0, columnspan=2, sticky='w', pady=(6, 12))
+        buttons = ttk.Frame(panel)
+        buttons.grid(row=8, column=0, columnspan=2, sticky='w')
+        self.actions = []
+        for label, command in [('Test email', lambda: self.launch('test-email')),
+                               ('Start monitoring', lambda: self.launch('run'))]:
+            button = ttk.Button(buttons, text=label, command=command)
+            button.pack(side='left', padx=(0, 8))
+            self.actions.append(button)
+        self.stop_button = ttk.Button(buttons, text='Stop', command=self.stop, state='disabled')
+        self.stop_button.pack(side='left')
+        self.status = tk.StringVar(value='Ready. Using Python ' + sys.version.split()[0])
+        ttk.Label(panel, textvariable=self.status).grid(row=9, column=0, columnspan=2, sticky='w', pady=10)
+        self.output = ScrolledText(panel, height=12, state='disabled', wrap='word')
+        self.output.grid(row=10, column=0, columnspan=2, sticky='nsew')
+        panel.rowconfigure(10, weight=1)
+        ttk.Label(panel, text='First successful check establishes a baseline without historical alerts.\n'
+                  'Alerts flag filings for review; they do not confirm a merger.').grid(
+            row=11, column=0, columnspan=2, sticky='w', pady=(12, 0))
+        window.protocol('WM_DELETE_WINDOW', self.close)
+        window.after(100, self.drain)
+
+    def toggle_advanced(self):
+        if self.advanced.winfo_manager():
+            self.advanced.grid_remove()
+            self.advanced_button.configure(text='Advanced')
+        else:
+            self.advanced.grid()
+            self.advanced_button.configure(text='Hide advanced')
+
+    def fill_email(self, *_):
+        domain = self.fields['contact'].get().strip().rpartition('@')[2].lower()
+        provider = PROVIDERS.get(domain)
+        if provider:
+            name, host, port, security = provider
+            self.fields['host'].set(host)
+            self.fields['port'].set(str(port))
+            self.fields['security'].set(security)
+            self.provider_hint.set(name + ' detected. Use an app password from your account settings.')
+        else:
+            self.fields['host'].set('')
+            self.fields['port'].set('587')
+            self.fields['security'].set('starttls')
+            self.provider_hint.set('Other provider? Open Advanced to enter its mail server settings.')
+
+    def prepare(self):
+        try:
+            self.cfg = session_config(self.cfg, {k: v.get() for k, v in self.fields.items()})
+        except (ValueError, KeyError, OSError) as exc:
+            messagebox.showerror('Check settings', str(exc), parent=self.window)
+            return False
+        return True
+
+    def set_busy(self, busy):
+        for button in self.actions + [self.advanced_button]:
+            button.configure(state='disabled' if busy else 'normal')
+        for entry, key in self.inputs:
+            entry.configure(state='disabled' if busy else ('readonly' if key == 'security' else 'normal'))
+        self.stop_button.configure(state='normal' if busy else 'disabled')
+
+    def launch(self, command):
+        if self.process is not None or not self.prepare():
+            return
+        env = os.environ.copy()
+        password = self.fields['password'].get()
+        if password:
+            env[self.cfg['smtp']['password_env']] = password
+        if self.cfg['smtp']['username'] and not env.get(self.cfg['smtp']['password_env']):
+            messagebox.showerror('Password needed', 'Enter your email app password first.', parent=self.window)
+            return
+        env['PYTHONIOENCODING'] = 'utf-8'
+        try:
+            self.process = subprocess.Popen(
+                [sys.executable, '-u', str(Path(__file__).resolve()), '--worker', command],
+                cwd=ROOT, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, encoding='utf-8', errors='replace',
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+            self.process.stdin.write(json.dumps(self.cfg))
+            self.process.stdin.close()
+        except OSError as exc:
+            if self.process is not None:
+                self.process.terminate()
+                self.process.wait()
+                self.process = None
+            messagebox.showerror('Unable to start', str(exc), parent=self.window)
+            return
+        self.stopping = False
+        self.command = command
+        self.set_busy(True)
+        self.status.set('Monitoring started. Check the log below for Poll OK for both companies.'
+                        if command == 'run' else 'Testing email delivery...')
+        threading.Thread(target=self.read_output, args=(self.process,), daemon=True).start()
+
+    def read_output(self, process):
+        try:
+            for line in process.stdout:
+                self.events.put(('line', line))
+        finally:
+            process.stdout.close()
+            self.events.put(('done', process.wait()))
+
+    def drain(self):
+        try:
+            while True:
+                kind, value = self.events.get_nowait()
+                if kind == 'line':
+                    self.output.configure(state='normal')
+                    self.output.insert('end', value)
+                    if int(self.output.index('end-1c').split('.')[0]) > 1000:
+                        self.output.delete('1.0', '101.0')
+                    self.output.see('end')
+                    self.output.configure(state='disabled')
+                else:
+                    self.process = None
+                    self.set_busy(False)
+                    if self.stopping:
+                        self.status.set('Stopped. Filing history and pending alerts are saved.')
+                    elif value == 0 and self.command == 'test-email':
+                        self.status.set('Email accepted by server. Check your inbox and spam folder.')
+                    else:
+                        self.status.set('Monitor exited. Review the log below for details.')
+        except queue.Empty:
+            pass
+        self.window.after(100, self.drain)
+
+    def stop(self):
+        if self.process is not None and self.process.poll() is None:
+            self.stopping = True
+            self.process.terminate()
+            self.status.set('Stopping...')
+            self.stop_button.configure(state='disabled')
+
+    def close(self):
+        self.stop()
+        if self.process is not None:
+            self.process.wait(timeout=5)
+        self.window.destroy()
+
+
+def open_window():
+    window = tk.Tk()
+    window.withdraw()
     try:
-        main()
-    except KeyboardInterrupt:
-        pass
+        app = App(window)
+    except Exception as exc:
+        messagebox.showerror('Unable to open SEC Monitor', str(exc), parent=window)
+        window.destroy()
+    else:
+        window.deiconify()
+        window.mainloop()
+
+
+if __name__ == '__main__':
+    if len(sys.argv) == 3 and sys.argv[1] == '--worker':
+        try:
+            run_worker(sys.argv[2], validate_config(json.load(sys.stdin)))
+        except KeyboardInterrupt:
+            pass
+    else:
+        open_window()

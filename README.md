@@ -58,4 +58,4 @@ Push to GitHub and import the repo at [vercel.com/new](https://vercel.com/new) �
 
 ## Subprojects
 
-- [SEC EDGAR monitor](./sec-edgar-monitor/README.md) — standalone Windows Python monitor for Tesla and SpaceX filings, with email alerts, SQLite deduplication, RSS/JSON benchmarking, and Task Scheduler setup. Runs separately from the web app.
+- [SEC EDGAR monitor](./sec-edgar-monitor/monitor.py) — run this standalone Python script to open setup, enter your email and SMTP app password, and start monitoring Tesla and SpaceX filings. Requires Python 3.9+ with tkinter; no additional packages. Keep the window open and PC awake. Filing history and logs are saved in `state/` beside the script.
