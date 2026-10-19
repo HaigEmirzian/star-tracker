@@ -30,7 +30,6 @@ import subprocess
 import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
-from tkinter.scrolledtext import ScrolledText
 
 LOG = logging.getLogger("edgar")
 ACC = re.compile(r"\d{10}-\d{2}-\d{6}")
@@ -391,6 +390,36 @@ def session_config(base, values):
     return validate_config(cfg)
 
 
+def apply_dark_theme(window):
+    background, surface, text = '#181a20', '#252932', '#edf0f5'
+    muted, accent = '#a5adbb', '#526d96'
+    window.configure(background=background)
+    style = ttk.Style(window)
+    style.theme_use('clam')
+    style.configure('.', background=background, foreground=text, font=('Segoe UI', 10))
+    style.configure('TFrame', background=background)
+    style.configure('TLabel', background=background, foreground=text)
+    style.configure('TEntry', fieldbackground=surface, foreground=text, insertcolor=text,
+                    bordercolor='#414854', lightcolor=surface, darkcolor=surface, padding=6)
+    style.configure('TCombobox', fieldbackground=surface, background=surface, foreground=text,
+                    arrowcolor=text, bordercolor='#414854', padding=6)
+    for widget in ('TEntry', 'TCombobox'):
+        style.map(widget, fieldbackground=[('disabled', '#20232a'), ('readonly', surface)],
+                  foreground=[('disabled', muted), ('readonly', text)],
+                  selectbackground=[('!disabled', accent)], selectforeground=[('!disabled', text)])
+    style.configure('TButton', background=surface, foreground=text, bordercolor='#414854',
+                    lightcolor=surface, darkcolor=surface, padding=(12, 7))
+    style.map('TButton', background=[('disabled', '#20232a'), ('pressed', '#405372'),
+                                   ('active', '#35445e')], foreground=[('disabled', '#777f8d')])
+    style.configure('Vertical.TScrollbar', background='#414854', troughcolor=background,
+                    arrowcolor=text, bordercolor=background, lightcolor=background, darkcolor=background)
+    style.map('Vertical.TScrollbar', background=[('active', '#59657a')])
+    window.option_add('*TCombobox*Listbox.background', surface)
+    window.option_add('*TCombobox*Listbox.foreground', text)
+    window.option_add('*TCombobox*Listbox.selectBackground', accent)
+    window.option_add('*TCombobox*Listbox.selectForeground', text)
+
+
 class App:
     def __init__(self, window):
         self.window = window
@@ -399,6 +428,7 @@ class App:
         self.stopping = False
         self.command = None
         self.cfg = copy.deepcopy(DEFAULT_CONFIG)
+        apply_dark_theme(window)
         window.title('Tesla + SpaceX SEC Monitor')
         window.geometry('780x600')
         panel = ttk.Frame(window, padding=18)
@@ -455,8 +485,17 @@ class App:
         self.stop_button.pack(side='left')
         self.status = tk.StringVar(value='Ready. Using Python ' + sys.version.split()[0])
         ttk.Label(panel, textvariable=self.status).grid(row=9, column=0, columnspan=2, sticky='w', pady=10)
-        self.output = ScrolledText(panel, height=12, state='disabled', wrap='word')
-        self.output.grid(row=10, column=0, columnspan=2, sticky='nsew')
+        log_panel = ttk.Frame(panel)
+        log_panel.grid(row=10, column=0, columnspan=2, sticky='nsew')
+        self.output = tk.Text(log_panel, height=12, state='disabled', wrap='word',
+                              background='#101217', foreground='#d9e0ec', insertbackground='#edf0f5',
+                              selectbackground='#405372', selectforeground='#ffffff',
+                              relief='flat', highlightthickness=1, highlightbackground='#414854',
+                              highlightcolor='#526d96', padx=10, pady=8)
+        scrollbar = ttk.Scrollbar(log_panel, orient='vertical', command=self.output.yview)
+        self.output.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side='right', fill='y')
+        self.output.pack(side='left', fill='both', expand=True)
         panel.rowconfigure(10, weight=1)
         ttk.Label(panel, text='First successful check establishes a baseline without historical alerts.\n'
                   'Alerts flag filings for review; they do not confirm a merger.').grid(
