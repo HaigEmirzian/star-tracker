@@ -1,6 +1,7 @@
 import type { CitedFigure } from "@/lib/data/gpuSpecs";
 import { collectFootnotes } from "@/lib/citations";
 import { computeDeals, dealsRollup, dealsLastUpdated, type ComputeDeal } from "@/lib/data/dealsStatic";
+import { q3Results, q3ResultsSource } from "@/lib/data/quarterlyStatic";
 
 const usdCompact = (v: number) =>
   new Intl.NumberFormat("en-US", {
@@ -54,7 +55,7 @@ function DealCard({ deal }: { deal: ComputeDeal }) {
           </div>
         )}
         <div className="flex justify-between gap-4">
-          <dt className="text-white/40">{isAcquisition ? "Deal value" : "Total contract value"}</dt>
+          <dt className="text-white/40">{isAcquisition ? "Implied equity value" : "Total contract value"}</dt>
           <dd className="text-right text-white">{usdCompact(deal.totalContractValue.value)}</dd>
         </div>
         {deal.gpuCount && (
@@ -70,8 +71,8 @@ function DealCard({ deal }: { deal: ComputeDeal }) {
           </div>
         )}
         <div className="flex justify-between gap-4">
-          <dt className="text-white/40">Term</dt>
-          <dd className="text-right text-white">{formatRange(deal.startDate, deal.endDate)}</dd>
+          <dt className="text-white/40">{isAcquisition ? "Closed" : "Term"}</dt>
+          <dd className="text-right text-white">{isAcquisition ? deal.startDate : formatRange(deal.startDate, deal.endDate)}</dd>
         </div>
       </dl>
 
@@ -86,7 +87,7 @@ export default function DealsPanel() {
       (f): f is CitedFigure<number> => f !== undefined,
     ),
   );
-  const rollupFootnotes = Object.values(dealsRollup);
+  const rollupFootnotes = [...Object.values(dealsRollup), ...Object.values(q3Results.si), ...Object.values(q3Results.company)];
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col items-center gap-8 text-center">
@@ -101,8 +102,29 @@ export default function DealsPanel() {
       <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
         <RollupStat label="Committed lease revenue" figure={dealsRollup.combinedLeaseRevenue} format={usdCompact} />
         <RollupStat label="Colossus GPUs (est.)" figure={dealsRollup.colossusGpuCount} format={numberFmt} />
-        <RollupStat label="Colossus power capacity" figure={dealsRollup.colossusCapacityGw} format={(v) => `${v} GW`} />
+        <RollupStat label="SI nameplate compute" figure={q3Results.si.nameplateComputeGw} format={(v) => `${v} GW`} />
       </div>
+
+      <section className="flex w-full flex-col gap-4 text-left" aria-labelledby="si-quarter-heading">
+        <div>
+          <h2 id="si-quarter-heading" className="text-sm uppercase tracking-wide text-white/50">Q3 2026 · Super Intelligence</h2>
+          <p className="mt-2 text-sm text-white/50">
+            Company-reported results for the quarter ended {q3Results.periodEnd}.
+            SI is the segment previously called AI and includes cloud services,
+            Cursor, Grok and advertising; its revenue is broader than the leases below.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <RollupStat label="SI revenue" figure={q3Results.si.revenue} format={usdCompact} />
+          <RollupStat label="SI operating income" figure={q3Results.si.operatingIncome} format={usdCompact} />
+          <RollupStat label="SI capex" figure={q3Results.si.capex} format={usdCompact} />
+        </div>
+        <p className="text-xs text-white/40">
+          Company totals: revenue {usdCompact(q3Results.company.revenue.value)}, GAAP net income{" "}
+          {usdCompact(q3Results.company.netIncome.value)}, capex {usdCompact(q3Results.company.capex.value)}.
+          {" "}<a href={q3ResultsSource.source} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 hover:text-white/60">SpaceX Q3 results</a>
+        </p>
+      </section>
 
       <div className="flex w-full flex-col gap-4 text-left">
         <div className="text-sm uppercase tracking-wide text-white/50">Deals</div>
@@ -129,7 +151,7 @@ export default function DealsPanel() {
       </div>
 
       <p className="text-xs text-white/30">
-        SpaceX Q2 2026 total revenue {usdCompact(dealsRollup.q2_2026Revenue.value)} · Target{" "}
+        Planned Memphis campus power capacity {dealsRollup.colossusCapacityGw.value} GW · Target{" "}
         {dealsRollup.target2027PowerGw.value} GW of power/cooling online by end of 2027 · Data
         last updated {dealsLastUpdated}
       </p>

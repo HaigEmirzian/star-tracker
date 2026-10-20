@@ -4,6 +4,7 @@ import { fccStarlinkAuthorization, starlinkNetwork, firstLaunchDate } from "@/li
 import type { StarlinkSummary, StarlinkGpEntry } from "@/lib/data/celestrak";
 import type { LaunchSummary } from "@/lib/data/launchLibrary";
 import StarlinkGrowthChart from "@/components/tabs/StarlinkGrowthChart";
+import { q3Results, q3ResultsSource } from "@/lib/data/quarterlyStatic";
 
 // globe.gl/three touch window/document and are a heavy dependency (~600KB) —
 // load only client-side, only once this panel actually renders.
@@ -169,6 +170,35 @@ export default function StarlinkPanel({
           sub={`Since first launch, ${formatDate(firstLaunchDate)}`}
         />
       </div>
+
+      <section className="flex flex-col gap-4" aria-labelledby="starlink-quarter-heading">
+        <div>
+          <h2 id="starlink-quarter-heading" className="text-sm uppercase tracking-wide text-white/50">Q3 2026 · Connectivity</h2>
+          <p className="mt-2 text-sm text-white/50">
+            Company-reported snapshot at {q3Results.periodEnd}, released {q3Results.lastUpdated}.
+            Consumer subscribers include personal and business subscription plans;
+            managed enterprise and government contracts are excluded.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard label="Consumer subscribers" value={`${q3Results.connectivity.subscribers.value / 1_000_000}M`} sub="At quarter end" />
+          <StatCard label="Consumer monthly ARPU" value={`$${q3Results.connectivity.arpu.value}`} sub="Q3 average revenue per subscriber" />
+          <StatCard label="Equipped aircraft" value={`Over ${q3Results.connectivity.equippedAircraft.value.toLocaleString()}`} sub="At quarter end" />
+          <StatCard label="Countries with coverage" value={`${q3Results.connectivity.countries.value}`} sub="At quarter end" />
+          <StatCard label="Connectivity revenue" value={`$${q3Results.connectivity.revenue.value / 1_000_000_000}B`} sub="Q3 · includes enterprise and government" />
+          <StatCard label="Connectivity operating income" value={`$${q3Results.connectivity.operatingIncome.value / 1_000_000_000}B`} sub="Q3 · GAAP" />
+        </div>
+        <p className="text-xs text-white/40">
+          SpaceX reports Starship Flight 14 delivered {q3Results.connectivity.v3SatellitesOnFlight14.value} V3
+          satellites, adding approximately 10× the downlink capacity of a Falcon 9
+          Starlink launch. {" "}
+          SpaceX also reported {(q3Results.connectivity.satellitesInOrbit.value / 1_000).toFixed(1)}K total satellites in orbit at quarter end.
+          This rounded total includes satellites approved for deorbit; the former
+          definition would exclude approximately 400. It differs from the live
+          CelesTrak count above. {" "}
+          <a href={q3ResultsSource.source} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 hover:text-white/60">SpaceX Q3 results, pp. 2, 4–5, 8</a>
+        </p>
+      </section>
 
       {summary ? (
         summary.cumulativeByLaunchYear.length > 1 && (
