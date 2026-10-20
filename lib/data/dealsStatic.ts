@@ -1,5 +1,10 @@
 import type { CitedFigure } from "@/lib/data/gpuSpecs";
 
+const q3EarningsSource = {
+  source: "https://www.sec.gov/Archives/edgar/data/1181412/000162828026066482/spaceexplorationtechnologi.htm",
+  sourceLabel: "SpaceX — Q3 2026 earnings release (SEC Exhibit 99.1)",
+};
+
 // Manually maintained, cited data on SpaceX's third-party AI compute
 // contracts (Colossus data center leases, plus the Cursor acquisition).
 // Same discipline as starmindStatic.ts/fccStatic.ts: every dollar/capacity
@@ -116,11 +121,10 @@ export const computeDeals: ComputeDeal[] = [
     facility: "SpaceX GPU fleet (incl. Colossus)",
     totalContractValue: {
       value: 60_000_000_000,
-      source: "https://en.cryptonomist.ch/2026/08/15/spacex-cursor-acquisition/",
-      sourceLabel: "Cryptonomist — SpaceX closes $60B Cursor acquisition",
-      note: "Acquisition price, not a compute-lease revenue figure",
+      ...q3EarningsSource,
+      note: "Implied equity value of the acquisition, not GAAP purchase consideration or compute-lease revenue",
     },
-    startDate: "2026-08-15",
+    startDate: "2026-08-14",
     endDate: null,
     notes:
       "SpaceX bought Cursor outright rather than leasing it capacity — Cursor now gets access to SpaceX's GPU fleet, including Colossus, to scale its own model training.",
@@ -135,12 +139,10 @@ export const dealsRollup = {
     sourceLabel: "MLQ News — SpaceX $6.3B Reflection AI deal",
     note: "Combined committed revenue from outside compute tenants (Anthropic, Google, Reflection, Cursor's prior lease) through 2029 — excludes the Cursor acquisition price itself",
   } as CitedFigure<number>,
-  q2_2026Revenue: {
-    value: 7_800_000_000,
-    source:
-      "https://techcrunch.com/2026/08/04/spacex-doubles-revenues-on-anthropic-and-google-compute-deals-starlink-growth/",
-    sourceLabel: "TechCrunch — SpaceX doubles revenue on compute deals",
-    note: "Total company revenue, up from $4B in Q2 2025",
+  q3_2026Revenue: {
+    value: 14_575_000_000,
+    ...q3EarningsSource,
+    note: "Total company revenue for the quarter ended September 30, 2026, up 161% year-over-year",
   } as CitedFigure<number>,
   colossusGpuCount: {
     value: 780_000,
@@ -162,4 +164,4 @@ export const dealsRollup = {
   } as CitedFigure<number>,
 };
 
-export const dealsLastUpdated = "2026-09-25";
+export const dealsLastUpdated = "2026-10-20";
