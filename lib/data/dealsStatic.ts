@@ -1,5 +1,4 @@
 import type { CitedFigure } from "@/lib/data/gpuSpecs";
-import { q3ResultsSource } from "@/lib/data/quarterlyStatic";
 
 // Manually maintained, cited data on SpaceX's third-party AI compute
 // contracts (Colossus data center leases, plus the Cursor acquisition).
@@ -117,13 +116,14 @@ export const computeDeals: ComputeDeal[] = [
     facility: "SpaceX GPU fleet (incl. Colossus)",
     totalContractValue: {
       value: 60_000_000_000,
-      ...q3ResultsSource,
-      note: "Implied equity value; GAAP purchase consideration was $42.5B. Neither is compute-lease revenue. Results p. 7.",
+      source: "https://ir.spacex.com/financials/",
+      sourceLabel: "SpaceX — Q3 2026 results, p. 7",
+      note: "Implied equity value; GAAP purchase consideration was $42.5B, per Q3 results. Not compute-lease revenue.",
     },
     startDate: "2026-08-14",
     endDate: null,
     notes:
-      "Closed August 14, 2026 at a $60B implied equity value; GAAP purchase consideration was $42.5B. Cursor contributed $608M in revenue from closing through September 30. The release separately reports $23.4B of equity awards attributable to post-acquisition service, subject to forfeiture.",
+      "Closed August 14, 2026 at a $60B implied equity value; Q3 results disclose $42.5B GAAP purchase consideration. SpaceX bought Cursor outright rather than leasing it capacity — Cursor now gets access to SpaceX's GPU fleet, including Colossus, to scale its own model training.",
   },
 ];
 
@@ -134,6 +134,12 @@ export const dealsRollup = {
     source: "https://mlq.ai/news/spacex-signs-63b-compute-deal-with-reflection-ai-for-colossus-data-center/",
     sourceLabel: "MLQ News — SpaceX $6.3B Reflection AI deal",
     note: "Combined committed revenue from outside compute tenants (Anthropic, Google, Reflection, Cursor's prior lease) through 2029 — excludes the Cursor acquisition price itself",
+  } as CitedFigure<number>,
+  q3_2026Revenue: {
+    value: 14_575_000_000,
+    source: "https://ir.spacex.com/financials/",
+    sourceLabel: "SpaceX — Q3 2026 results, p. 3",
+    note: "Total company revenue for the quarter ended September 30, 2026, released October 20",
   } as CitedFigure<number>,
   colossusGpuCount: {
     value: 780_000,
