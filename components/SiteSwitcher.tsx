@@ -37,7 +37,7 @@ export default function SiteSwitcher({ starlinkData, robotaxiData }: SiteSwitche
                   activeSite === "spacex" ? "opacity-100" : "opacity-40 hover:opacity-70"
                 }`}
               >
-                <Image src="/images/logos/spacex.png" alt="SpaceX" fill className="object-contain p-1" />
+                <Image src="/images/logos/spacex.png" alt="SpaceX" fill sizes="64px" className="object-contain p-1" />
               </button>
               <button
                 type="button"
@@ -48,7 +48,7 @@ export default function SiteSwitcher({ starlinkData, robotaxiData }: SiteSwitche
                   activeSite === "tesla" ? "opacity-100" : "opacity-40 hover:opacity-70"
                 }`}
               >
-                <Image src="/images/logos/tesla.png" alt="Tesla" fill className="object-contain p-1" />
+                <Image src="/images/logos/tesla.png" alt="Tesla" fill sizes="64px" className="object-contain p-1" />
               </button>
             </div>
   ) : null;
