@@ -5,6 +5,20 @@ const q3EarningsSource = {
   sourceLabel: "SpaceX — Q3 2026 earnings release (SEC Exhibit 99.1)",
 };
 
+// October 31 company forecasts, cross-checked against reporting reproducing
+// Musk's posts. These targets do not establish an updated installed total.
+const colossusBuildout: CitedFigure<string> = {
+  value: "Musk's Oct 31 targets: Gun Range — 220K GB300s for training, operational by end of November; Spam — about 200K GB300s for inference, in December. He also targets around 1.2M Blackwell GPUs at Colossus 2 by year-end. These are forecasts, not confirmed operational capacity.",
+  source: "https://x.com/elonmusk/status/2116587474021691629",
+  sourceLabel: "Elon Musk — Oct 31 Gun Range and Spam buildout targets",
+};
+
+const colossusYearEndTarget: CitedFigure<string> = {
+  value: "Around 1.2M Blackwell GPUs at Colossus 2 by end of 2026 (company target)",
+  source: "https://x.com/elonmusk/status/2116596535433871630",
+  sourceLabel: "Elon Musk — Oct 31 Colossus 2 year-end target",
+};
+
 // Manually maintained, cited data on SpaceX's third-party AI compute
 // contracts (Colossus data center leases, plus the Cursor acquisition).
 // Same discipline as starmindStatic.ts/fccStatic.ts: every dollar/capacity
@@ -148,8 +162,11 @@ export const dealsRollup = {
     value: 780_000,
     source: "https://x.com/elonmusk/status/2103329761690865846",
     sourceLabel: "Elon Musk — Colossus GPU inventory disclosure",
-    note: "Company claim on Sep 25, 2026: 230,000 GPUs at Colossus 1 (150K H100, 50K H200, 30K GB200) plus 550,000 at Colossus 2 (110K GB200, 440K GB300). Excludes 220K GB300 forecast for next week, 220K for November, and a conditional further 220K by late December because those were not yet operational.",
+    note: `Last combined inventory snapshot, per Musk on Sep 25, 2026: 230,000 GPUs at Colossus 1 (150K H100, 50K H200, 30K GB200) plus 550,000 at Colossus 2 (110K GB200, 440K GB300). This is a dated snapshot, not a live count. ${colossusBuildout.value}`,
   } as CitedFigure<number>,
+  // Included in the existing source list; the text appears in the GPU note.
+  colossusBuildout,
+  colossusYearEndTarget,
   colossusCapacityGw: {
     value: 2,
     source: "https://www.teslarati.com/spacex-confirms-third-massive-compute-deal-colossus-memphis/",
@@ -164,4 +181,4 @@ export const dealsRollup = {
   } as CitedFigure<number>,
 };
 
-export const dealsLastUpdated = "2026-10-20";
+export const dealsLastUpdated = "2026-10-31";
