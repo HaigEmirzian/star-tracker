@@ -14,7 +14,7 @@ import type { CitedFigure } from "@/lib/data/gpuSpecs";
 // here, only the latest confirmed figure is shown, with no mention of the
 // superseded one.
 export const starmind = {
-  lastUpdated: "2026-09-06",
+  lastUpdated: "2026-11-25",
   status: "PRE-DEPLOYMENT" as const,
   confirmedDate: "2026-06-24",
   partner: "Nvidia",
@@ -32,10 +32,24 @@ export const starmind = {
   },
   fccFiling: {
     filedDate: "2026-01-30",
-    requestedSatellites: 1_000_000,
-    altitudeRangeKm: [500, 2000] as [number, number],
+    fileNumber: "SAT-LOA-20260108-00016",
+    callSign: "S00798",
+  },
+  fccAuthorization: {
+    decisionDate: "2026-11-25",
+    decision: "Granted in part, deferred in part",
+    order: "DA 26-1273",
+    source: "https://docs.fcc.gov/public/attachments/DA-26-1273A1.pdf",
+    maxSatellites: 1_000_000,
+    altitudeRangeKm: [500, 1_002] as const,
     inclinations: "Sun-synchronous and 30°",
-    milestoneWaiverRequested: true,
+    milestones: [
+      { year: 2033, satellites: 1 },
+      { year: 2035, satellites: 100_000 },
+      { year: 2038, satellites: 500_000 },
+      { year: 2040, satellites: 1_000_000 },
+    ],
+    condition: "A final orbital debris mitigation plan is required before deploying above 600 km.",
   },
   factory: {
     location: "Bastrop, Texas",

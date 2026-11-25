@@ -36,6 +36,8 @@ function FactCard({ title, rows }: { title: string; rows: { label: string; value
 const numberFmt = (v: number) => v.toLocaleString();
 
 export default function StarmindPanel() {
+  const { fccFiling, fccAuthorization } = starmind;
+
   return (
     <div className="mx-auto flex max-w-3xl flex-col items-center gap-8 text-center">
       <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs uppercase tracking-widest text-white/60">
@@ -97,18 +99,35 @@ export default function StarmindPanel() {
           />
 
           <FactCard
-            title="FCC filing"
+            title="FCC authorization"
             rows={[
-              { label: "Filed", value: starmind.fccFiling.filedDate },
+              { label: "Filed", value: fccFiling.filedDate },
+              { label: "FCC file", value: `${fccFiling.fileNumber} · ${fccFiling.callSign}` },
+              { label: "Decision", value: `${fccAuthorization.decisionDate} · ${fccAuthorization.decision}` },
               {
-                label: "Requested satellites",
-                value: starmind.fccFiling.requestedSatellites.toLocaleString(),
+                label: "Authorized satellites",
+                value: `Up to ${numberFmt(fccAuthorization.maxSatellites)}`,
               },
               {
-                label: "Altitude range",
-                value: `${starmind.fccFiling.altitudeRangeKm[0]}-${starmind.fccFiling.altitudeRangeKm[1]} km`,
+                label: "Authorized altitudes",
+                value: `${fccAuthorization.altitudeRangeKm.map(numberFmt).join("–")} km`,
               },
-              { label: "Inclinations", value: starmind.fccFiling.inclinations },
+              { label: "Inclinations", value: fccAuthorization.inclinations },
+              {
+                label: "License milestones",
+                value: fccAuthorization.milestones.map(({ year, satellites }) => (
+                  <span key={year} className="block">{numberFmt(satellites)} by Nov {year}</span>
+                )),
+              },
+              { label: "Debris mitigation", value: fccAuthorization.condition },
+              {
+                label: "FCC order",
+                value: (
+                  <a href={fccAuthorization.source} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                    {fccAuthorization.order}
+                  </a>
+                ),
+              },
             ]}
           />
 
