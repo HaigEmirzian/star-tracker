@@ -52,7 +52,7 @@ export const robotaxiCities: RobotaxiCityStatus[] = [
     // https://driveteslacanada.ca/news/tesla-cybercab-midnight-operating-hours-austin/
     // https://www.notateslaapp.com/news/4844/tesla-extends-robotaxi-hours-again-now-until-midnight
     notes:
-      "First city to run unsupervised, and the only one carrying Cybercabs — public Cybercab rides opened in a limited Austin geofence on 2026-09-04. On 2026-10-17, Tesla app notifications reported Cybercab rides available until midnight local time; this is not 24/7 service.",
+      "First city to run unsupervised. Public Cybercab rides opened in a limited Austin geofence on 2026-09-04. On 2026-10-17, Tesla app notifications reported Cybercab rides available until midnight local time.",
   },
   {
     id: "dallas",
@@ -64,8 +64,11 @@ export const robotaxiCities: RobotaxiCityStatus[] = [
       source: "https://tech-insider.org/tesla-robotaxi-dallas-houston-unsupervised-launch-2026/",
       sourceLabel: "Tech Insider — Dallas/Houston unsupervised launch",
     },
+    // Tesla's Nov. 25 map and service announcement:
+    // https://x.com/robotaxi/status/2125657961242726732
+    // https://theelectricstandard.ca/news/tesla-robotaxi-dallas-service-area-expands
     notes:
-      "Service zone expanded 50% on 2026-08-31 alongside the first Cybercab registrations, running FSD v15 builds.",
+      "Tesla expanded the Dallas service area north to include Farmers Branch and Richardson on 2026-11-25. Tesla also said it added cars and lowered fares, without disclosing a fleet count, the new fare, or how long it would apply.",
   },
   {
     id: "houston",
@@ -603,4 +606,4 @@ export const notDisclosed = [
   "Incidents per mile — NHTSA's ADS reports cover all Tesla autonomous operation while Tesla's mileage figures cover paid miles only, so the two cannot be divided into a rate",
 ];
 
-export const robotaxiLastUpdated = "2026-10-17";
+export const robotaxiLastUpdated = "2026-11-25";
