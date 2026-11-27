@@ -1,5 +1,5 @@
-import type { CitedFigure } from "@/lib/data/gpuSpecs";
 import { computeDeals, dealsRollup, dealsLastUpdated, type ComputeDeal } from "@/lib/data/dealsStatic";
+import { disclosedLeaseValue } from "@/lib/data/revenue";
 import RevenuePanel from "@/components/tabs/RevenuePanel";
 import ComputeGrowthChart from "@/components/tabs/ComputeGrowthChart";
 
@@ -13,11 +13,11 @@ const usdCompact = (v: number) =>
 
 const numberFmt = (v: number) => v.toLocaleString();
 
-function RollupStat({ label, figure, format, caption }: { label: string; figure: CitedFigure<number>; format: (v: number) => string; caption: string }) {
+function RollupStat({ label, value, format, caption }: { label: string; value: number; format: (v: number) => string; caption: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
       <div className="text-sm uppercase tracking-wide text-white/50">{label}</div>
-      <div className="mt-2 text-3xl font-semibold text-white">{format(figure.value)}</div>
+      <div className="mt-2 text-3xl font-semibold text-white">{format(value)}</div>
       <div className="mt-1 text-xs text-white/40">{caption}</div>
     </div>
   );
@@ -55,24 +55,24 @@ function DealCard({ deal }: { deal: ComputeDeal }) {
           </div>
         )}
         <div className="flex justify-between gap-4">
-          <dt className="text-white/40">{isAcquisition ? "Deal value" : "Total contract value"}</dt>
-          <dd className="text-right text-white">{deal.expansion ? "Up to " : ""}{usdCompact((deal.expansion?.maximumContractValue ?? deal.totalContractValue).value)}</dd>
+          <dt className="text-white/40">{isAcquisition ? "Implied equity value" : "Total contract value"}</dt>
+          <dd className="text-right text-white">{isAcquisition ? "" : deal.id === "google" ? "~" : "Up to "}{usdCompact((deal.expansion?.maximumContractValue ?? deal.totalContractValue).value)}</dd>
         </div>
         {deal.gpuCount && (
           <div className="flex justify-between gap-4">
-            <dt className="text-white/40">GPUs</dt>
-            <dd className="text-right text-white">{numberFmt(deal.gpuCount.value)}</dd>
+            <dt className="text-white/40">{deal.expansion ? "Original agreement GPUs" : "Contracted GPUs"}</dt>
+            <dd className="text-right text-white">~{numberFmt(deal.gpuCount.value)}</dd>
           </div>
         )}
-        {deal.capacityMw && (
+        {deal.capacityMw && !deal.expansion && (
           <div className="flex justify-between gap-4">
             <dt className="text-white/40">Power capacity</dt>
             <dd className="text-right text-white">{deal.capacityMw.value} MW</dd>
           </div>
         )}
         <div className="flex justify-between gap-4">
-          <dt className="text-white/40">Term</dt>
-          <dd className="text-right text-white">{deal.expansion ? `${deal.startDate} - into 2029` : formatRange(deal.startDate, deal.endDate)}</dd>
+          <dt className="text-white/40">{isAcquisition ? "Acquired" : "Term"}</dt>
+          <dd className="text-right text-white">{isAcquisition ? deal.startDate : deal.expansion ? `${deal.startDate} - into 2029` : formatRange(deal.startDate, deal.endDate)}</dd>
         </div>
       </dl>
 
@@ -98,9 +98,9 @@ export default function DealsPanel() {
       </div>
 
       <div className="grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
-        <RollupStat label="Earlier lease commitments" figure={dealsRollup.combinedLeaseRevenue} format={usdCompact} caption="Before Anthropic's expanded agreements." />
-        <RollupStat label="Colossus GPUs" figure={dealsRollup.colossusGpuCount} format={numberFmt} caption="Colossus 1 and 2 as of Sep 25, 2026." />
-        <RollupStat label="Colossus power capacity" figure={dealsRollup.colossusCapacityGw} format={(v) => `${v} GW`} caption="Planned capacity across the Memphis campus." />
+        <RollupStat label="Disclosed lease value" value={disclosedLeaseValue} format={(v) => `~${usdCompact(v)}`} caption="Combined full-term values, subject to delivery and cancellation." />
+        <RollupStat label="Colossus GPUs" value={dealsRollup.colossusGpuCount.value} format={numberFmt} caption="Colossus 1 and 2 as of Sep 25, 2026." />
+        <RollupStat label="Planned Colossus power capacity" value={dealsRollup.colossusCapacityGw.value} format={(v) => `${v} GW`} caption="Memphis campus target." />
       </div>
 
       <div className="flex w-full max-w-3xl flex-col gap-4 text-left">
@@ -114,8 +114,7 @@ export default function DealsPanel() {
       </div>
 
       <p className="text-xs text-white/30">
-        SpaceX Q3 2026 total revenue {usdCompact(dealsRollup.q3_2026Revenue.value)} &middot; Target{" "}
-        {dealsRollup.target2027PowerGw.value} GW of power/cooling online by end of 2027 &middot; Data
+        SpaceX Q3 2026 total revenue {usdCompact(dealsRollup.q3_2026Revenue.value)} &middot; Data
         last updated {dealsLastUpdated}
       </p>
     </div>
