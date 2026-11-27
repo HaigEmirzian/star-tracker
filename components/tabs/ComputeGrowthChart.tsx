@@ -21,7 +21,7 @@ export default function ComputeGrowthChart() {
     <section className="flex min-w-0 w-full flex-col gap-4 text-left">
       <div className="min-w-0 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm sm:p-6">
         <div className="mb-5">
-          <h2 className="text-sm font-medium text-white/50">Reported compute capacity</h2>
+          <h2 className="text-sm font-medium text-white/50" title="Installed nameplate compute capacity. Dots represent disclosed quarter-end values.">Reported compute capacity &middot; {dateLabel(latest.time)}</h2>
           <div className="mt-1 flex items-baseline gap-2">
             <span className="text-5xl font-semibold tracking-tight text-white">{latest.gw}</span>
             <span className="text-sm text-white/50">GW</span>
@@ -35,7 +35,7 @@ export default function ComputeGrowthChart() {
               <XAxis dataKey="time" type="number" domain={["dataMin", "dataMax"]} ticks={quarterTicks} interval={0} tick={<QuarterAxisTick />} height={36} tickLine={false} axisLine={false} />
               <YAxis domain={[0, "auto"]} tickFormatter={(value: number) => `${value} GW`} tick={{ fill: "#ffffff80", fontSize: 11 }} tickLine={false} axisLine={false} width={54} />
               <Tooltip cursor={{ stroke: "#ffffff40" }} content={({ active, label }) => {
-                const point = chartData.find((row) => row.time === label);
+                const point = chartData.find((row) => row.time === Number(label));
                 if (!active || !point) return null;
                 return (
                   <div className="rounded-xl border border-white/15 bg-black/95 p-4 text-left text-xs shadow-xl">
