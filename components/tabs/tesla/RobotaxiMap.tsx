@@ -32,6 +32,9 @@ const STATUS_STYLE: Record<
   "safety-driver": { fill: "#d95926", ring: "#d95926", glow: "url(#rtGlowSd)", label: "Safety driver" },
   permitted: { fill: "none", ring: "#7dd3fc", label: "Permitted, not open" },
   announced: { fill: "none", ring: "rgba(255,255,255,0.45)", dash: "2 2", label: "Announced" },
+  testing: { fill: "#a78bfa", ring: "#a78bfa", label: "Testing" },
+  sighted: { fill: "none", ring: "#a78bfa", dash: "2 2", label: "Sighted" },
+  hiring: { fill: "none", ring: "#facc15", dash: "2 2", label: "SI operator listings" },
 };
 
 // Marker radius by status — driverless cities get a presence proportional to
@@ -42,6 +45,9 @@ const RADIUS: Record<RobotaxiCityStatus["status"], number> = {
   "safety-driver": 5,
   permitted: 4.5,
   announced: 4.5,
+  testing: 5,
+  sighted: 4.5,
+  hiring: 4.5,
 };
 
 const GLOW_RADIUS: Record<string, number> = {
@@ -66,6 +72,12 @@ const LABEL: Record<string, { dx: number; dy: number; anchor: "start" | "middle"
   "bay-area": { dx: 13, dy: -4, anchor: "start", sub: "safety driver" },
   "las-vegas": { dx: 12, dy: -3, anchor: "start", sub: "10-vehicle cap" },
   phoenix: { dx: 12, dy: 4, anchor: "start" },
+  detroit: { dx: 0, dy: -12, anchor: "middle" },
+  chicago: { dx: -12, dy: -4, anchor: "end" },
+  philadelphia: { dx: -12, dy: 10, anchor: "end" },
+  nyc: { dx: -14, dy: -8, anchor: "end" },
+  boston: { dx: -12, dy: -8, anchor: "end" },
+  atlanta: { dx: -12, dy: 4, anchor: "end" },
 };
 
 export default function RobotaxiMap() {
@@ -94,6 +106,7 @@ export default function RobotaxiMap() {
     .filter((e): e is { city: RobotaxiCityStatus; pos: readonly [number, number] } => Boolean(e.pos));
 
   const driverless = placed.filter((p) => p.city.status === "driverless").length;
+  const testing = placed.filter((p) => p.city.status === "testing").length;
 
   const selected = placed.find(({ city }) => city.id === selectedId);
   const focusWeight = Math.min(1, (scale - 1) / 0.65);
@@ -111,7 +124,7 @@ export default function RobotaxiMap() {
           Where robotaxis operate
         </h2>
         <span className="text-[10px] uppercase tracking-wider text-white/25">
-          {driverless} driverless of {placed.length} metros
+          {driverless} driverless &middot; {testing} testing
         </span>
       </div>
 
@@ -140,7 +153,7 @@ export default function RobotaxiMap() {
         viewBox={`0 0 ${US_MAP_VIEWBOX.width} ${US_MAP_VIEWBOX.height}`}
         className="mx-auto block h-[clamp(220px,calc(100svh-360px),360px)] w-full"
         role="group"
-        aria-label={`Map of the United States showing ${driverless} metros with driverless Tesla robotaxi service, plus cities under a safety-driver requirement, permitted but not open, and announced only.`}
+        aria-label={`Map of the United States showing ${driverless} driverless Tesla robotaxi metros, plus safety-driver, permitted, announced, testing, sighted and hiring locations.`}
       >
         <defs>
           <radialGradient id="rtGlowLive" cx="50%" cy="50%" r="50%">
@@ -237,7 +250,7 @@ export default function RobotaxiMap() {
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/60">
               <span>{selected.city.launchDate
                 ? (selected.city.status === "permitted" ? "Permitted " : "Launched ") + selected.city.launchDate.value
-                : "Launch date unconfirmed"}</span>
+                : "Public launch unconfirmed"}</span>
               {selected.city.launchDate && (
                 <a href={selected.city.launchDate.source} target="_blank" rel="noopener noreferrer"
                   className="underline decoration-white/25 underline-offset-4 hover:text-white">
@@ -245,8 +258,14 @@ export default function RobotaxiMap() {
                 </a>
               )}
             </div>
+            <p className="mt-2 text-sm text-white/55">{selected.city.notes}</p>
+            {selected.city.evidence?.map((item) => (
+              <a key={item.source} href={item.source} target="_blank" rel="noopener noreferrer" className="mr-3 mt-2 inline-block text-xs text-white/55 underline decoration-white/25 underline-offset-4 hover:text-white">
+                {item.sourceLabel}
+              </a>
+            ))}
           </>
-        ) : <p className="text-sm text-white/50">Select a city to explore service status and launch details.</p>}
+        ) : <p className="text-sm text-white/50">Select a city to explore service, testing or hiring evidence.</p>}
       </div>
 
       <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/70">
