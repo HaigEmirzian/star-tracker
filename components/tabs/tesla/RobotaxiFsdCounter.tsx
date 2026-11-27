@@ -8,11 +8,12 @@ import { fsdMilesAnchor } from "@/lib/data/robotaxiStatic";
 //
 // HONESTY CONTRACT — this is the only number on the panel that moves on its
 // own, and it is a PROJECTION, not a measurement:
-//   - the anchor (12B miles at Q2 2026 close) is disclosed,
-//   - the rate (20.4M miles/day) is disclosed,
+//   - the anchor is a dated observation of Tesla's public counter,
+//   - the rate is a recent measured counter delta,
 //   - the value between them is ours, and the card says so on screen.
 // Never relabel this "live", never feed it into another metric, and never
-// write a projected value back into robotaxiStatic.ts as a fact.
+// write a projected value back into robotaxiStatic.ts as a fact. The recurring
+// tracker watch recalibrates the anchor when fresh source evidence is available.
 //
 // Hydration: the count depends on Date.now(), so it renders as a placeholder
 // until after mount. The server would otherwise bake its own clock into the
@@ -61,6 +62,7 @@ export default function RobotaxiFsdCounter() {
       </div>
 
       <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5">
+        <a href="https://www.tesla.com/fsd/safety" target="_blank" rel="noopener noreferrer" className="text-[10px] text-white/25 underline decoration-white/15 underline-offset-2 hover:text-white/55">Tesla FSD safety counter</a>
         {[fsdMilesAnchor.miles, fsdMilesAnchor.milesPerDay].map((figure) => (
           <a
             key={figure.source}

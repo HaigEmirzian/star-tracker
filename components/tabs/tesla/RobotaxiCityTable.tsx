@@ -9,9 +9,12 @@ const STATUS: Record<
   "safety-driver": { label: "Safety driver", tone: "warn" },
   permitted: { label: "Permitted", tone: "info" },
   announced: { label: "Announced", tone: "neutral" },
+  testing: { label: "Testing", tone: "info" },
+  sighted: { label: "Sighted", tone: "neutral" },
+  hiring: { label: "SI operator listings", tone: "neutral" },
 };
 
-const ORDER: RobotaxiCityStatus["status"][] = ["driverless", "safety-driver", "permitted", "announced"];
+const ORDER: RobotaxiCityStatus["status"][] = ["driverless", "safety-driver", "permitted", "testing", "sighted", "announced", "hiring"];
 
 export default function RobotaxiCityTable() {
   const rows = [...robotaxiCities].sort(
@@ -21,7 +24,7 @@ export default function RobotaxiCityTable() {
 
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3 backdrop-blur-sm">
-      <SectionLabel right={`${driverless} driverless of ${rows.length}`}>Cities</SectionLabel>
+      <SectionLabel right={`${driverless} driverless`}>Cities</SectionLabel>
       {/* Wide content scrolls inside its own container rather than the page. */}
       <div className="-mx-1 overflow-x-auto px-1">
         <table className="w-full min-w-[38rem] border-collapse text-left">
@@ -67,7 +70,12 @@ export default function RobotaxiCityTable() {
                       <span className="font-mono text-[11px] text-white/25">—</span>
                     )}
                   </td>
-                  <td className="py-2 text-[11px] leading-snug text-white/45">{city.notes}</td>
+                  <td className="py-2 text-[11px] leading-snug text-white/45">
+                    {city.notes}
+                    {city.evidence?.map((item) => (
+                      <a key={item.source} href={item.source} target="_blank" rel="noopener noreferrer" className="mt-1 block underline decoration-white/20 hover:text-white">{item.sourceLabel}</a>
+                    ))}
+                  </td>
                 </tr>
               );
             })}
