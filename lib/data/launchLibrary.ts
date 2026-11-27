@@ -1,5 +1,6 @@
 const LL2_BASE = "https://ll.thespacedevs.com/2.3.0/launches";
 const REVALIDATE_SECONDS = 60 * 30;
+const FETCH_TIMEOUT_MS = 5_000;
 
 // Typical current Starlink batch size, used only when a launch's mission
 // description doesn't state a count. Recent batches have ranged ~21-28
@@ -42,14 +43,24 @@ async function fetchLaunches(
 ): Promise<LaunchSummary[]> {
   const ordering = path === "previous" ? "&ordering=-net" : "";
   const url = `${LL2_BASE}/${path}/?search=starlink&limit=${limit}${ordering}`;
-  const res = await fetch(url, {
-    next: { revalidate: REVALIDATE_SECONDS },
-    headers: { Accept: "application/json" },
-  });
+  let data: Ll2Response;
+  try {
+    const res = await fetch(url, {
+      next: { revalidate: REVALIDATE_SECONDS },
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
 
-  if (!res.ok) return [];
+    if (!res.ok) return [];
 
-  const data: Ll2Response = await res.json();
+    data = await res.json();
+  } catch {
+    // Launch Library may be unreachable. Let the dashboard render its
+    // existing unavailable-data state while the other data sources load.
+    return [];
+  }
+
+  if (!Array.isArray(data?.results)) return [];
   return data.results.map((r) => {
     const description = r.mission?.description ?? null;
     const parsedCount = parseSatelliteCount(description);
@@ -69,7 +80,7 @@ async function fetchLaunches(
 // after it has actually already flown (observed lag: the same launch shows
 // up correctly under /previous/ well before it's removed from /upcoming/).
 // Filter those out here so "next launch" never shows an already-resolved
-// launch — expand this set if LL2 is observed using another terminal
+// launch - expand this set if LL2 is observed using another terminal
 // status name.
 const TERMINAL_STATUSES = new Set(["Launch Successful", "Launch Failure", "Partial Failure"]);
 
