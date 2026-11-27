@@ -1,5 +1,4 @@
 import type { CitedFigure } from "@/lib/data/gpuSpecs";
-import { collectFootnotes } from "@/lib/citations";
 import { computeDeals, dealsRollup, dealsLastUpdated, type ComputeDeal } from "@/lib/data/dealsStatic";
 
 const usdCompact = (v: number) =>
@@ -12,18 +11,18 @@ const usdCompact = (v: number) =>
 
 const numberFmt = (v: number) => v.toLocaleString();
 
-function RollupStat({ label, figure, format }: { label: string; figure: CitedFigure<number>; format: (v: number) => string }) {
+function RollupStat({ label, figure, format, caption }: { label: string; figure: CitedFigure<number>; format: (v: number) => string; caption: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
       <div className="text-sm uppercase tracking-wide text-white/50">{label}</div>
       <div className="mt-2 text-3xl font-semibold text-white">{format(figure.value)}</div>
-      {figure.note && <div className="mt-1 text-xs text-white/40">{figure.note}</div>}
+      <div className="mt-1 text-xs text-white/40">{caption}</div>
     </div>
   );
 }
 
 function formatRange(startDate: string, endDate: string | null) {
-  return endDate ? `${startDate} – ${endDate}` : `${startDate} – ongoing`;
+  return endDate ? `${startDate} - ${endDate}` : `${startDate} - ongoing`;
 }
 
 function DealCard({ deal }: { deal: ComputeDeal }) {
@@ -81,13 +80,6 @@ function DealCard({ deal }: { deal: ComputeDeal }) {
 }
 
 export default function DealsPanel() {
-  const dealFootnotes = computeDeals.flatMap((deal) =>
-    [deal.monthlyFee, deal.totalContractValue, deal.gpuCount, deal.capacityMw].filter(
-      (f): f is CitedFigure<number> => f !== undefined,
-    ),
-  );
-  const rollupFootnotes = Object.values(dealsRollup);
-
   return (
     <div className="mx-auto flex max-w-3xl flex-col items-center gap-8 text-center">
       <h1 className="text-5xl font-semibold tracking-tight text-white sm:text-6xl">
@@ -95,13 +87,13 @@ export default function DealsPanel() {
       </h1>
       <p className="max-w-xl text-balance text-lg text-white/60">
         SpaceX rents out AI compute capacity at its Colossus data center campus in
-        Memphis — here&apos;s who&apos;s renting it, and what it&apos;s worth.
+        Memphis - here&apos;s who&apos;s renting it, and what it&apos;s worth.
       </p>
 
       <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
-        <RollupStat label="Committed lease revenue" figure={dealsRollup.combinedLeaseRevenue} format={usdCompact} />
-        <RollupStat label="Colossus GPUs (est.)" figure={dealsRollup.colossusGpuCount} format={numberFmt} />
-        <RollupStat label="Colossus power capacity" figure={dealsRollup.colossusCapacityGw} format={(v) => `${v} GW`} />
+        <RollupStat label="Committed lease revenue" figure={dealsRollup.combinedLeaseRevenue} format={usdCompact} caption="Compute leases through 2029." />
+        <RollupStat label="Colossus GPUs" figure={dealsRollup.colossusGpuCount} format={numberFmt} caption="Colossus 1 and 2 as of Sep 25, 2026." />
+        <RollupStat label="Colossus power capacity" figure={dealsRollup.colossusCapacityGw} format={(v) => `${v} GW`} caption="Planned capacity across the Memphis campus." />
       </div>
 
       <div className="flex w-full flex-col gap-4 text-left">
@@ -112,25 +104,11 @@ export default function DealsPanel() {
           ))}
         </div>
 
-        <ul className="flex flex-col gap-1 text-xs text-white/30">
-          {collectFootnotes([...dealFootnotes, ...rollupFootnotes]).map((fn) => (
-            <li key={fn.source}>
-              <a
-                href={fn.source}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline decoration-white/20 hover:text-white/50"
-              >
-                {fn.label}
-              </a>
-            </li>
-          ))}
-        </ul>
       </div>
 
       <p className="text-xs text-white/30">
-        SpaceX Q3 2026 total revenue {usdCompact(dealsRollup.q3_2026Revenue.value)} · Target{" "}
-        {dealsRollup.target2027PowerGw.value} GW of power/cooling online by end of 2027 · Data
+        SpaceX Q3 2026 total revenue {usdCompact(dealsRollup.q3_2026Revenue.value)} � Target{" "}
+        {dealsRollup.target2027PowerGw.value} GW of power/cooling online by end of 2027 � Data
         last updated {dealsLastUpdated}
       </p>
     </div>
