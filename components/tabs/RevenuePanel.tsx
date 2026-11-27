@@ -55,7 +55,7 @@ export default function RevenuePanel() {
       <div className="min-w-0 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm sm:p-6">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-sm font-medium text-white/50">Peak annualized lease revenue</h2>
+            <h2 className="text-sm font-medium text-white/50" title="Scheduled full-rate lease fees, annualized; assumes capacity delivery and continued contracts. Undisclosed ramp fees and Anthropic's uncertain 2029 expiry are excluded.">Peak scheduled annualized lease revenue</h2>
             <div className="mt-1 flex items-baseline gap-2">
               <span className="text-5xl font-semibold tracking-tight text-white">{money(peakRevenue * multiplier)}</span>
               <span className="text-sm text-white/50">/ year</span>
