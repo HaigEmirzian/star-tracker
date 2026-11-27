@@ -2,10 +2,18 @@
 
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { computeGrowth } from "@/lib/data/computeGrowth";
+import QuarterAxisTick from "@/components/tabs/QuarterAxisTick";
 
 const color = "#9CBBFF";
 const chartData = computeGrowth.map((point) => ({ ...point, time: Date.parse(point.date) }));
 const latest = chartData[chartData.length - 1];
+const firstDate = new Date(chartData[0].time);
+const quarterTicks: number[] = [];
+for (let offset = 0; ; offset += 3) {
+  const end = Date.UTC(firstDate.getUTCFullYear(), firstDate.getUTCMonth() + offset + 1, 0);
+  if (end > latest.time) break;
+  quarterTicks.push(end);
+}
 const dateLabel = (time: number) => new Date(time).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 
 export default function ComputeGrowthChart() {
@@ -24,7 +32,7 @@ export default function ComputeGrowthChart() {
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 12, right: 12, bottom: 8, left: 0 }}>
               <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.09)" />
-              <XAxis dataKey="time" type="number" domain={["dataMin", "dataMax"]} ticks={[chartData[0].time, chartData[1].time, chartData[5].time, latest.time]} tickFormatter={dateLabel} tick={{ fill: "#ffffff80", fontSize: 11 }} tickLine={false} axisLine={false} />
+              <XAxis dataKey="time" type="number" domain={["dataMin", "dataMax"]} ticks={quarterTicks} interval={0} tick={<QuarterAxisTick />} height={36} tickLine={false} axisLine={false} />
               <YAxis domain={[0, "auto"]} tickFormatter={(value: number) => `${value} GW`} tick={{ fill: "#ffffff80", fontSize: 11 }} tickLine={false} axisLine={false} width={54} />
               <Tooltip cursor={{ stroke: "#ffffff40" }} content={({ active, label }) => {
                 const point = chartData.find((row) => row.time === label);
@@ -47,7 +55,6 @@ export default function ComputeGrowthChart() {
         </div>
       </div>
 
-      <p className="text-center text-xs leading-relaxed text-white/45">Installed compute capacity as reported in SpaceX&apos;s prospectus and quarterly results. Latest: {dateLabel(latest.time)}.</p>
     </section>
   );
 }
