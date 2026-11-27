@@ -78,6 +78,14 @@ const LABEL: Record<string, { dx: number; dy: number; anchor: "start" | "middle"
   nyc: { dx: -14, dy: -8, anchor: "end" },
   boston: { dx: -12, dy: -8, anchor: "end" },
   atlanta: { dx: -12, dy: 4, anchor: "end" },
+  seattle: { dx: 12, dy: 4, anchor: "start" },
+  pittsburgh: { dx: -10, dy: 18, anchor: "end" },
+  utah: { dx: 12, dy: 4, anchor: "start" },
+  charlotte: { dx: 12, dy: 4, anchor: "start" },
+  nashville: { dx: -12, dy: -8, anchor: "end" },
+  minneapolis: { dx: 0, dy: -12, anchor: "middle" },
+  buffalo: { dx: 10, dy: -8, anchor: "start" },
+  "san-diego": { dx: -12, dy: 17, anchor: "end" },
 };
 
 export default function RobotaxiMap() {
