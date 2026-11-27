@@ -21,13 +21,12 @@ runs a wide 12-column grid at `max-w-[1600px]` with a tighter type/padding
 scale. That width is set on the panel's own root — `<main>` has no max-width
 and the shell isn't shared — so nothing about it touches the SpaceX side.
 
-**The entire Tesla side is gated behind `futureFeaturesEnabled`**
-(`lib/flags.ts`, driven by the `NEXT_PUBLIC_FUTURE_FEATURES` env var). When
-it's off — the default, including on the deployed site — the site toggle is
-hidden and only the SpaceX tracker renders; `page.tsx` also skips the NHTSA
-fetch. The Tesla code still ships to `main` so it can be reviewed and iterated
-on in the open. Set `NEXT_PUBLIC_FUTURE_FEATURES=1` locally (or in Vercel
-project settings) to work on it.
+**Both the SpaceX and Tesla trackers are publicly available.**
+Use `futureFeaturesEnabled` from `lib/flags.ts` for unreleased features only.
+Keep it `false` on `main` and toggle it in a development branch to review
+gated work. Gate feature-specific server data requests as well as UI, and
+remove the individual gate when the feature is ready to release. The flag is
+code-controlled and requires no environment variable or Vercel configuration.
 
 ## Commands
 
