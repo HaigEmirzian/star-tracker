@@ -57,7 +57,7 @@ export const computeDeals: ComputeDeal[] = [
     counterparty: "Anthropic",
     counterpartyType: "AI lab",
     dealType: "compute lease",
-    facility: "Colossus 1 (Memphis)",
+    facility: "Colossus 1 and 2 (Memphis)",
     monthlyFee: {
       value: 1_250_000_000,
       source: "https://www.axios.com/2026/05/20/anthropic-spacex-compute",
@@ -85,10 +85,10 @@ export const computeDeals: ComputeDeal[] = [
       note: "Full contract term through May 2029, at the stated monthly rate",
     },
     gpuCount: {
-      value: 220_000,
-      source: "https://www.cnbc.com/2026/05/06/anthropic-spacex-data-center-capacity.html",
-      sourceLabel: "CNBC - Anthropic/SpaceX compute deal",
-      note: "Lease covers all of Colossus 1's capacity - 220,000+ Nvidia GPUs",
+      value: 325_000,
+      source: "https://www.sec.gov/Archives/edgar/data/1181412/000162828026039276/spaceexplorationtechnologi.htm",
+      sourceLabel: "SpaceX S-1 - original Anthropic compute agreements",
+      note: "Approximate GPU count under the original agreements; expanded GPU count undisclosed.",
     },
     capacityMw: {
       value: 300,
@@ -99,7 +99,7 @@ export const computeDeals: ComputeDeal[] = [
     startDate: "2026-05",
     endDate: "2029-05",
     notes:
-      "Expanded agreements target $3.1B/month from December 2026, subject to capacity delivery; terms extend into 2029 with cancellation rights.",
+      "Expanded agreements target $3.1B/month from December 2026, subject to delivery; terms extend into 2029. Either party may cancel with 90 days' notice after initial periods.",
   },
   {
     id: "google",
@@ -128,7 +128,7 @@ export const computeDeals: ComputeDeal[] = [
     rampStartDate: "2026-06",
     endDate: "2029-06",
     notes:
-      "If SpaceX can't hit the 110,000-GPU target (plus a one-month grace period), Google can cancel or settle for fewer GPUs with a pro-rata fee reduction.",
+      "Fees depend on GPU delivery; either party can cancel with 90 days' notice after December 2026.",
   },
   {
     id: "reflection-ai",
@@ -206,4 +206,4 @@ export const dealsRollup = {
   } as CitedFigure<number>,
 };
 
-export const dealsLastUpdated = "2026-10-31";
+export const dealsLastUpdated = "2026-11-26";
