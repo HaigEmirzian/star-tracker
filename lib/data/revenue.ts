@@ -1,22 +1,15 @@
 import { computeDeals } from "./dealsStatic";
 
-const earningsCall = "https://docs.publicnow.com/viewDoc?filename=28442%5CEXT%5CD2382E66D06B2CAD0252E23426FEE3F569C3482C_7A6291CA6B33DCE0B66186B170E415BE35AF695C.PDF";
-
-export const revenueTargets = {
-  december2026: 100_000_000_000,
-  december2027Base: 500_000_000_000,
-  december2027Upside: 1_000_000_000_000,
-  source: earningsCall,
-  followUpSource: "https://singjupost.com/full-transcript-ron-baron-interviews-elon-musk-at-baron-investment-conference-2026/",
-};
-
 export const leaseDeals = computeDeals.filter((deal) => deal.dealType === "compute lease" && deal.monthlyFee);
+
+export const disclosedLeaseValue = leaseDeals.reduce(
+  (total, deal) => total + (deal.expansion?.maximumContractValue ?? deal.totalContractValue).value,
+  0,
+);
 
 export interface RevenueMonth {
   month: string;
   fees: Record<string, number | null>;
-  base: number | null;
-  upside: number | null;
 }
 
 // All values are monthly USD. Null fees indicate undisclosed terms, while
@@ -41,13 +34,7 @@ export function buildRevenueTimeline(): RevenueMonth[] {
       }
     }
 
-    // Interpolate only between the two disclosed December run-rate targets.
-    const progress = (index - 11) / 12;
-    const forecast = (target: number) => progress >= 0 && progress <= 1
-      ? (revenueTargets.december2026 + (target - revenueTargets.december2026) * progress) / 12
-      : null;
-
-    return { month, fees, base: forecast(revenueTargets.december2027Base), upside: forecast(revenueTargets.december2027Upside) };
+    return { month, fees };
   });
 }
 
