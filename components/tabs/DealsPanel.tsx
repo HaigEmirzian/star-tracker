@@ -98,7 +98,7 @@ export default function DealsPanel() {
       </div>
 
       <div className="grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
-        <RollupStat label="Disclosed lease value" value={disclosedLeaseValue} format={(v) => `~${usdCompact(v)}`} caption="Combined full-term values, subject to delivery and cancellation." />
+        <RollupStat label="Disclosed lease value" value={disclosedLeaseValue} format={(v) => `~${usdCompact(v)}`} caption="Potential cumulative lease revenue through 2029." />
         <RollupStat label="Colossus GPUs" value={dealsRollup.colossusGpuCount.value} format={numberFmt} caption="Colossus 1 and 2 as of Sep 25, 2026." />
         <RollupStat label="Planned Colossus power capacity" value={dealsRollup.colossusCapacityGw.value} format={(v) => `${v} GW`} caption="Memphis campus target." />
       </div>
