@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { Area, CartesianGrid, ComposedChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { buildRevenueTimeline, leaseDeals, totalKnownFees, type RevenueMonth } from "@/lib/data/revenue";
+import QuarterAxisTick from "@/components/tabs/QuarterAxisTick";
 
 const timeline = buildRevenueTimeline();
+const quarterTicks = timeline.filter((_, index) => index % 3 === 0).map((row) => row.month);
 const companyColors: Record<string, string> = {
   anthropic: "#D97757",
   google: "#4285F4",
@@ -65,7 +67,7 @@ export default function RevenuePanel() {
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={timeline} margin={{ top: 12, right: 12, bottom: 8, left: 0 }}>
               <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.09)" />
-              <XAxis dataKey="month" ticks={["2026-01", "2027-01", "2028-01", "2029-01", "2029-12"]} tickFormatter={monthLabel} tick={{ fill: "#ffffff80", fontSize: 11 }} tickLine={false} axisLine={false} />
+              <XAxis dataKey="month" ticks={quarterTicks} interval={0} tick={<QuarterAxisTick />} height={36} tickLine={false} axisLine={false} />
               <YAxis domain={[0, "auto"]} tickFormatter={money} tick={{ fill: "#ffffff80", fontSize: 11 }} tickLine={false} axisLine={false} width={64} />
               <Tooltip cursor={{ stroke: "#ffffff40" }} content={({ active, label }) => <RevenueTooltip active={active} month={timeline.find((row) => row.month === label)} multiplier={multiplier} hidden={hidden} />} />
               {leaseDeals.map((deal) => (
@@ -86,9 +88,6 @@ export default function RevenuePanel() {
         </div>
       </div>
 
-      <p className="mx-auto max-w-4xl text-center text-xs leading-relaxed text-white/45">
-        Lease areas use disclosed scheduled fees, assuming contracts continue and capacity is delivered. Undisclosed ramp fees and Anthropic&apos;s unknown 2029 expiry schedule are omitted. ARR equals monthly revenue x 12.
-      </p>
     </section>
   );
 }
