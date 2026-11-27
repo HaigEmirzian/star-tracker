@@ -122,8 +122,8 @@ export default function RobotaxiPanel({ incidents, news, fleet }: RobotaxiPanelP
           <RobotaxiSection
             id="cities"
             title="Cities & status"
-            summary="Launch dates and the terms each metro operates under"
-            count={`${driverlessCities} of ${robotaxiCities.length} driverless`}
+            summary="Service status, testing evidence and operator listings"
+            count={`${driverlessCities} driverless`}
             defaultOpen
           >
             <RobotaxiCityTable />
