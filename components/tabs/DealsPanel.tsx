@@ -48,13 +48,13 @@ function DealCard({ deal }: { deal: ComputeDeal }) {
       <dl className="flex flex-col gap-2 text-sm">
         {deal.monthlyFee && (
           <div className="flex justify-between gap-4">
-            <dt className="text-white/40">Monthly fee</dt>
-            <dd className="text-right text-white">{usdCompact(deal.monthlyFee.value)}</dd>
+            <dt className="text-white/40">{deal.expansion ? "Monthly fee at full capacity" : "Monthly fee"}</dt>
+            <dd className="text-right text-white">{deal.expansion ? "~" : ""}{usdCompact((deal.expansion?.monthlyFee ?? deal.monthlyFee).value)}</dd>
           </div>
         )}
         <div className="flex justify-between gap-4">
           <dt className="text-white/40">{isAcquisition ? "Deal value" : "Total contract value"}</dt>
-          <dd className="text-right text-white">{usdCompact(deal.totalContractValue.value)}</dd>
+          <dd className="text-right text-white">{deal.expansion ? "Up to " : ""}{usdCompact((deal.expansion?.maximumContractValue ?? deal.totalContractValue).value)}</dd>
         </div>
         {deal.gpuCount && (
           <div className="flex justify-between gap-4">
@@ -70,7 +70,7 @@ function DealCard({ deal }: { deal: ComputeDeal }) {
         )}
         <div className="flex justify-between gap-4">
           <dt className="text-white/40">Term</dt>
-          <dd className="text-right text-white">{formatRange(deal.startDate, deal.endDate)}</dd>
+          <dd className="text-right text-white">{deal.expansion ? `${deal.startDate} - into 2029` : formatRange(deal.startDate, deal.endDate)}</dd>
         </div>
       </dl>
 
@@ -91,7 +91,7 @@ export default function DealsPanel() {
       </p>
 
       <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
-        <RollupStat label="Committed lease revenue" figure={dealsRollup.combinedLeaseRevenue} format={usdCompact} caption="Compute leases through 2029." />
+        <RollupStat label="Earlier lease commitments" figure={dealsRollup.combinedLeaseRevenue} format={usdCompact} caption="Before Anthropic's expanded agreements." />
         <RollupStat label="Colossus GPUs" figure={dealsRollup.colossusGpuCount} format={numberFmt} caption="Colossus 1 and 2 as of Sep 25, 2026." />
         <RollupStat label="Colossus power capacity" figure={dealsRollup.colossusCapacityGw} format={(v) => `${v} GW`} caption="Planned capacity across the Memphis campus." />
       </div>
@@ -107,8 +107,8 @@ export default function DealsPanel() {
       </div>
 
       <p className="text-xs text-white/30">
-        SpaceX Q3 2026 total revenue {usdCompact(dealsRollup.q3_2026Revenue.value)} � Target{" "}
-        {dealsRollup.target2027PowerGw.value} GW of power/cooling online by end of 2027 � Data
+        SpaceX Q3 2026 total revenue {usdCompact(dealsRollup.q3_2026Revenue.value)} ? Target{" "}
+        {dealsRollup.target2027PowerGw.value} GW of power/cooling online by end of 2027 ? Data
         last updated {dealsLastUpdated}
       </p>
     </div>
