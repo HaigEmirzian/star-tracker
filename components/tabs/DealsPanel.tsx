@@ -1,6 +1,7 @@
 import type { CitedFigure } from "@/lib/data/gpuSpecs";
 import { computeDeals, dealsRollup, dealsLastUpdated, type ComputeDeal } from "@/lib/data/dealsStatic";
 import RevenuePanel from "@/components/tabs/RevenuePanel";
+import ComputeGrowthChart from "@/components/tabs/ComputeGrowthChart";
 
 const usdCompact = (v: number) =>
   new Intl.NumberFormat("en-US", {
@@ -91,7 +92,10 @@ export default function DealsPanel() {
         Memphis - here&apos;s who&apos;s renting it, and what it&apos;s worth.
       </p>
 
-      <RevenuePanel />
+      <div className="grid w-full min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-2">
+        <RevenuePanel />
+        <ComputeGrowthChart />
+      </div>
 
       <div className="grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
         <RollupStat label="Earlier lease commitments" figure={dealsRollup.combinedLeaseRevenue} format={usdCompact} caption="Before Anthropic's expanded agreements." />
