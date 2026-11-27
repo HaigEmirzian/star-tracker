@@ -110,8 +110,8 @@ export default function DealsPanel() {
       </div>
 
       <p className="text-xs text-white/30">
-        SpaceX Q3 2026 total revenue {usdCompact(dealsRollup.q3_2026Revenue.value)} ? Target{" "}
-        {dealsRollup.target2027PowerGw.value} GW of power/cooling online by end of 2027 ? Data
+        SpaceX Q3 2026 total revenue {usdCompact(dealsRollup.q3_2026Revenue.value)} &middot; Target{" "}
+        {dealsRollup.target2027PowerGw.value} GW of power/cooling online by end of 2027 &middot; Data
         last updated {dealsLastUpdated}
       </p>
     </div>
