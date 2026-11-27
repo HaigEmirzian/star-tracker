@@ -37,4 +37,10 @@ export const CITY_POSITIONS: Record<string, readonly [number, number]> = {
   "bay-area": [102, 235.9],
   "las-vegas": [207.9, 297],
   "phoenix": [248.5, 362.7],
+  "detroit": [721.6, 186.1],
+  "philadelphia": [851, 213.6],
+  "chicago": [652.9, 203.4],
+  "nyc": [865.2, 193.9],
+  "boston": [900.9, 149.3],
+  "atlanta": [723.3, 367.6],
 };
