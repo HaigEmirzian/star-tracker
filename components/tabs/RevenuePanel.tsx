@@ -6,7 +6,12 @@ import { dealsRollup } from "@/lib/data/dealsStatic";
 import { buildRevenueTimeline, leaseDeals, revenueTargets, totalKnownFees, type RevenueMonth } from "@/lib/data/revenue";
 
 const timeline = buildRevenueTimeline();
-const colors = ["#d99b76", "#4285f4", "#34d399", "#a78bfa", "#facc15"];
+const companyColors: Record<string, string> = {
+  anthropic: "#D97757",
+  google: "#4285F4",
+  "reflection-ai": "#F8F6F2",
+};
+const companyColor = (id: string) => companyColors[id] ?? "#A78BFA";
 const money = (value: number) => new Intl.NumberFormat("en-US", {
   style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 3,
 }).format(value);
@@ -27,9 +32,9 @@ function RevenueTooltip({ month, active, multiplier, showForecast, hidden }: {
     <div className="min-w-56 rounded-xl border border-white/15 bg-black/95 p-4 text-left text-xs shadow-xl">
       <div className="mb-3 text-sm font-semibold text-white">{monthLabel(month.month)}</div>
       <div className="space-y-2">
-        {leaseDeals.map((deal, index) => (
+        {leaseDeals.map((deal) => (
           <div key={deal.id} className={`flex items-center justify-between gap-5 ${hidden.includes(deal.id) ? "opacity-40" : ""}`}>
-            <span className="flex items-center gap-2 text-white/70"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: colors[index % colors.length] }} />{deal.counterparty}</span>
+            <span className="flex items-center gap-2 text-white/70"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: companyColor(deal.id) }} />{deal.counterparty}</span>
             <span className="text-white">{month.fees[deal.id] === null ? "Undisclosed" : money(month.fees[deal.id]! * multiplier)}</span>
           </div>
         ))}
@@ -99,8 +104,8 @@ export default function RevenuePanel() {
               <XAxis dataKey="month" ticks={["2026-01", "2027-01", "2028-01", "2029-01", "2029-12"]} tickFormatter={monthLabel} tick={{ fill: "#ffffff80", fontSize: 11 }} tickLine={false} axisLine={false} />
               <YAxis domain={[0, "auto"]} tickFormatter={money} tick={{ fill: "#ffffff80", fontSize: 11 }} tickLine={false} axisLine={false} width={64} />
               <Tooltip cursor={{ stroke: "#ffffff40" }} content={({ active, label }) => <RevenueTooltip active={active} month={timeline.find((row) => row.month === label)} multiplier={multiplier} showForecast={showForecast} hidden={hidden} />} />
-              {leaseDeals.map((deal, index) => (
-                <Area key={deal.id} name={deal.counterparty} dataKey={(row: RevenueMonth) => (row.fees[deal.id] ?? 0) * multiplier} type="stepAfter" stackId="leases" hide={hidden.includes(deal.id)} stroke={colors[index % colors.length]} fill={colors[index % colors.length]} fillOpacity={0.45} strokeWidth={1.5} isAnimationActive={false} />
+              {leaseDeals.map((deal) => (
+                <Area key={deal.id} name={deal.counterparty} dataKey={(row: RevenueMonth) => (row.fees[deal.id] ?? 0) * multiplier} type="stepAfter" stackId="leases" hide={hidden.includes(deal.id)} stroke={companyColor(deal.id)} fill={companyColor(deal.id)} fillOpacity={0.85} strokeWidth={1.5} isAnimationActive={false} />
               ))}
               {showForecast && <>
                 <Line name="Base scenario" dataKey={(row: RevenueMonth) => row.base === null ? null : row.base * multiplier} type="linear" stroke="#7dd3fc" strokeWidth={2} strokeDasharray="6 5" dot={false} connectNulls={false} isAnimationActive={false} />
@@ -111,9 +116,9 @@ export default function RevenuePanel() {
         </div>
 
         <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs">
-          {leaseDeals.map((deal, index) => (
+          {leaseDeals.map((deal) => (
             <button type="button" key={deal.id} aria-pressed={!hidden.includes(deal.id)} onClick={() => toggleDeal(deal.id)} className={`flex items-center gap-2 ${hidden.includes(deal.id) ? "text-white/30 line-through" : "text-white/80"}`}>
-              <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: colors[index % colors.length] }} />{deal.counterparty}
+              <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: companyColor(deal.id) }} />{deal.counterparty}
             </button>
           ))}
           {showForecast && <>
