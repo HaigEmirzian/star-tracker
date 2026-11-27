@@ -39,9 +39,11 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### Feature flags
 
-Some work is merged but not yet public. Set `NEXT_PUBLIC_FUTURE_FEATURES=1`
-(env var or `.env.local`) to enable in-progress features — currently the Tesla
-Robotaxi tracker and its SpaceX/Tesla site toggle. Off by default.
+The SpaceX and Tesla trackers are public by default. Use `futureFeaturesEnabled`
+in `lib/flags.ts` to gate unreleased features and their feature-specific data
+requests. Keep the flag `false` on `main`; set it to `true` in a development
+branch to review gated work. Release a feature by removing its gate. No
+environment variable or Vercel configuration is required.
 
 ## Notes
 

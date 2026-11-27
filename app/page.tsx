@@ -7,7 +7,6 @@ import {
 import { getRobotaxiIncidentData } from "@/lib/data/nhtsaRobotaxi";
 import { getRobotaxiNews } from "@/lib/data/robotaxiNews";
 import { getTxdmvFleetData } from "@/lib/data/txdmvFleet";
-import { futureFeaturesEnabled } from "@/lib/flags";
 
 export default async function Home() {
   const [
@@ -21,10 +20,9 @@ export default async function Home() {
     getStarlinkData(),
     getUpcomingStarlinkLaunches(),
     getRecentStarlinkLaunches(),
-    // Tesla side is flag-gated — skip all three Tesla fetches when it's off.
-    futureFeaturesEnabled ? getRobotaxiIncidentData() : Promise.resolve(null),
-    futureFeaturesEnabled ? getRobotaxiNews() : Promise.resolve(null),
-    futureFeaturesEnabled ? getTxdmvFleetData() : Promise.resolve(null),
+    getRobotaxiIncidentData(),
+    getRobotaxiNews(),
+    getTxdmvFleetData(),
   ]);
 
   return (
