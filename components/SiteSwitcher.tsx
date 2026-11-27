@@ -22,7 +22,7 @@ export interface SiteSwitcherProps {
 export default function SiteSwitcher({ starlinkData, robotaxiData }: SiteSwitcherProps) {
   const [site, setSite] = useState<Site>("spacex");
 
-  // The Tesla side is gated behind `futureFeaturesEnabled` — when it's off, the
+  // The Tesla side is gated behind `futureFeaturesEnabled` - when it's off, the
   // site toggle is hidden entirely and only the SpaceX tracker renders.
   const activeSite: Site = futureFeaturesEnabled ? site : "spacex";
 
@@ -69,7 +69,7 @@ export default function SiteSwitcher({ starlinkData, robotaxiData }: SiteSwitche
 
       {activeSite === "spacex" && (
         <footer className="px-6 pb-8 text-center text-xs text-white/30">
-          Data from CelesTrak &amp; Launch Library 2. Not affiliated with SpaceX.
+          Data from CelesTrak &amp; Launch Library 2.
         </footer>
       )}
     </>
