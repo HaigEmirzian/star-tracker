@@ -32,8 +32,10 @@ export interface RobotaxiCityStatus {
   // "permitted"     — regulator has authorised operation, service not yet
   //                   open to the public at any meaningful scale
   // "announced"     — named by Tesla, no permit or launch confirmed
-  status: "driverless" | "safety-driver" | "permitted" | "announced";
+  // Testing requires reports of road tests; sightings and hiring are weaker signals.
+  status: "driverless" | "safety-driver" | "permitted" | "announced" | "testing" | "sighted" | "hiring";
   launchDate: CitedFigure<string> | null; // null when no confirmed date
+  evidence?: CitedFigure<string>[];
   notes: string;
 }
 
@@ -151,8 +153,69 @@ export const robotaxiCities: RobotaxiCityStatus[] = [
     state: "AZ",
     status: "announced",
     launchDate: null,
+    evidence: [{ value: "SI operator listing", source: "https://www.tesla.com/careers/search/job/si-vehicle-operator-self-driving--245016", sourceLabel: "Tesla Careers - Phoenix, req. 245016" }],
     notes:
       "Named in the H1 2026 expansion plan and staging has been observed, but no public launch as of this update — one of two cities Tesla missed its own H1 2026 deadline on.",
+  },
+  {
+    id: "detroit",
+    city: "Metro Detroit",
+    state: "MI",
+    status: "testing",
+    launchDate: null,
+    evidence: [{ value: "2026-11-04", source: "https://henrypayne.com/index.php/2026/11/tesla-cybercabs-join-waymo-in-detroit-robotaxi-testing", sourceLabel: "The Detroit News - reported Cybercab road tests" }],
+    notes: "Local reporting describes Cybercabs undergoing supervised road tests in Metro Detroit in November 2026. No public Robotaxi launch confirmed.",
+  },
+  {
+    id: "philadelphia",
+    city: "Philadelphia",
+    state: "PA",
+    status: "sighted",
+    launchDate: null,
+    evidence: [{ value: "2026-09-18", source: "https://www.inquirer.com/transportation/new-tesla-cybercab-fleet-philadelphia-testing-waymo-20260918.html", sourceLabel: "Philadelphia Inquirer - reported Cybercab sightings" }],
+    notes: "Cybercabs were reported in the Philadelphia area in September. Ongoing public-road testing and launch have not been confirmed.",
+  },
+  {
+    id: "chicago",
+    city: "Chicago",
+    state: "IL",
+    status: "hiring",
+    launchDate: null,
+    evidence: [{ value: "Prior SI operator listing", source: "https://www.tesla.com/careers/search/job/si-vehicle-operator-self-driving--266429", sourceLabel: "Tesla Careers - Chicago, req. 266429" }],
+    notes: "Tesla advertised a self-driving SI vehicle operator role. The listing is a hiring signal; fill status, Cybercab deployment and public service are unconfirmed.",
+  },
+  {
+    id: "nyc",
+    city: "New York / NJ",
+    state: "NY / NJ",
+    status: "hiring",
+    launchDate: null,
+    evidence: [
+      { value: "Prior SI operator listing", source: "https://www.tesla.com/careers/search/job/ai-vehicle-operator-self-driving--266086", sourceLabel: "Tesla Careers - Flushing, req. 266086" },
+      { value: "Prior SI operator listing", source: "https://www.tesla.com/hu_HU/careers/search/job/ai-safety-operator-271857", sourceLabel: "Tesla Careers - Englewood, req. 271857" },
+    ],
+    notes: "Tesla advertised self-driving operators in Flushing and Englewood. Historical listings do not establish hires or Cybercab testing.",
+  },
+  {
+    id: "boston",
+    city: "Greater Boston",
+    state: "MA",
+    status: "hiring",
+    launchDate: null,
+    evidence: [
+      { value: "SI operator listing", source: "https://www.tesla.com/careers/search/job/ai-vehicle-operator-self-driving--266991", sourceLabel: "Tesla Careers - Peabody, req. 266991" },
+      { value: "SI operator listing", source: "https://www.tesla.com/careers/search/job/ai-vehicle-operator-self-driving--281185", sourceLabel: "Tesla Careers - Norwell, req. 281185" },
+    ],
+    notes: "Tesla listed SI vehicle operator roles in the Boston metro; Cybercab deployment and filled positions are unconfirmed.",
+  },
+  {
+    id: "atlanta",
+    city: "Atlanta",
+    state: "GA",
+    status: "hiring",
+    launchDate: null,
+    evidence: [{ value: "SI operator listing", source: "https://www.tesla.com/careers/search", sourceLabel: "Tesla Careers - Atlanta SI vehicle operator" }],
+    notes: "Tesla's careers index listed an Atlanta self-driving SI vehicle operator role. Cybercab deployment and filled positions are unconfirmed.",
   },
 ];
 
@@ -473,34 +536,24 @@ export const fsdAttachRate: CitedFigure<number> = {
 };
 
 export const fsdCumulativeMiles: CitedFigure<number> = {
-  value: 12_000_000_000,
-  source: "https://evwire.com/p/tesla-q2-2026-earnings-results",
-  sourceLabel: "EVWire — Tesla Q2 2026 earnings recap",
-  note: "Cumulative FSD miles driven globally — consumer FSD (Level 2 supervised), a far larger and separate population from the robotaxi fleet's autonomous miles.",
+  value: 18_001_521_096,
+  source: "https://teslanorth.com/2026/11/24/tesla-fsds-live-counter-passes-18-billion-supervised-miles/",
+  sourceLabel: "TeslaNorth - Tesla counter, Nov 24, 2026",
+  note: "Published observation of Tesla's public FSD (Supervised) counter on November 24. Exact observation time was not supplied.",
 };
 
-// Inputs for the ticking FSD odometer in the UI. Tesla runs a live counter on
-// its own FSD page; we cannot read that, so the UI projects forward from the
-// last disclosed total at Tesla's own stated rate.
-//
-// BOTH VALUES BELOW ARE DISCLOSED. The projection built from them is not, and
-// the component that renders it says so on screen: it is an extrapolation
-// between quarterly disclosures, not a live feed, and it must never be
-// presented as a measured figure or written back into this file as one.
+// Periodically recalibrate against dated observations of Tesla's public FSD
+// counter. Between observations, the UI estimates mileage using a recent
+// measured counter delta; it must never be presented as live telemetry.
 export const fsdMilesAnchor = {
-  miles: {
-    value: 12_000_000_000,
-    source: "https://evwire.com/p/tesla-q2-2026-earnings-results",
-    sourceLabel: "EVWire — Tesla Q2 2026 earnings recap",
-    note: "Cumulative FSD miles as of the close of Q2 2026.",
-  } as CitedFigure<number>,
-  /** The instant the anchor figure describes — Q2 2026 close. */
-  asOfIso: "2026-06-30T00:00:00Z",
+  miles: fsdCumulativeMiles,
+  /** Approximate midday Eastern time; the source gives only the date. */
+  asOfIso: "2026-11-24T17:00:00Z",
   milesPerDay: {
-    value: 20_400_000,
-    source: "https://electrek.co/2026/05/03/tesla-fsd-10-billion-miles-no-magical-milestone-autonomy/",
-    sourceLabel: "Electrek — Tesla reaches 10 billion FSD miles",
-    note: "Tesla-stated Q1 2026 average of more than 20.4 million FSD miles per day, an all-time high at the time (~13,000 miles per minute). The real rate has almost certainly moved since.",
+    value: 45_257_723,
+    source: "https://fsdtracker.yeaker.com/",
+    sourceLabel: "FSD Tracker - Nov 26 daily counter delta",
+    note: "Third-party daily mileage delta calculated from Tesla's public counter on November 26, 2026; the actual rate varies.",
   } as CitedFigure<number>,
 };
 
@@ -606,4 +659,4 @@ export const notDisclosed = [
   "Incidents per mile — NHTSA's ADS reports cover all Tesla autonomous operation while Tesla's mileage figures cover paid miles only, so the two cannot be divided into a rate",
 ];
 
-export const robotaxiLastUpdated = "2026-11-25";
+export const robotaxiLastUpdated = "2026-11-26";
