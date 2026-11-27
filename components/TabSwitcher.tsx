@@ -5,15 +5,17 @@ import StarlinkPanel, { StarlinkPanelProps } from "@/components/tabs/StarlinkPan
 import StarmindPanel from "@/components/tabs/StarmindPanel";
 import ScalePanel from "@/components/tabs/ScalePanel";
 import DealsPanel from "@/components/tabs/DealsPanel";
+import RevenuePanel from "@/components/tabs/RevenuePanel";
 
 import TrackerNavigation from "@/components/TrackerNavigation";
 
-type Tab = "starlink" | "starmind" | "scale" | "deals";
+type Tab = "starlink" | "starmind" | "scale" | "deals" | "revenue";
 
 const TABS = [
   { key: "starmind", label: "Starmind" },
   { key: "starlink", label: "Starlink" },
   { key: "deals", label: "Deals" },
+  { key: "revenue", label: "Revenue" },
   { key: "scale", label: "Scale" },
 ] as const;
 
@@ -33,6 +35,7 @@ export default function TabSwitcher({ starlinkData, siteToggle }: { starlinkData
     starlink: null,
     scale: null,
     deals: null,
+    revenue: null,
   });
   const tablistRef = useRef<HTMLDivElement>(null);
 
@@ -107,7 +110,7 @@ export default function TabSwitcher({ starlinkData, siteToggle }: { starlinkData
               aria-controls={`panel-${t.key}`}
               tabIndex={tab === t.key ? 0 : -1}
               onClick={() => selectTab(t.key, false)}
-              className={`rounded-full px-6 py-2 text-sm font-medium tracking-wide transition-colors ${
+              className={`rounded-full px-3 py-2 text-sm font-medium tracking-wide transition-colors sm:px-6 ${
                 tab === t.key
                   ? "bg-white text-black"
                   : "text-white/60 hover:text-white"
@@ -127,6 +130,7 @@ export default function TabSwitcher({ starlinkData, siteToggle }: { starlinkData
         {tab === "starmind" && <StarmindPanel />}
         {tab === "starlink" && <StarlinkPanel {...starlinkData} />}
         {tab === "deals" && <DealsPanel />}
+        {tab === "revenue" && <RevenuePanel />}
         {tab === "scale" && <ScalePanel />}
       </div>
     </div>
