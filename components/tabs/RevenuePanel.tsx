@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Area, CartesianGrid, ComposedChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { dealsRollup } from "@/lib/data/dealsStatic";
 import { buildRevenueTimeline, leaseDeals, totalKnownFees, type RevenueMonth } from "@/lib/data/revenue";
 
 const timeline = buildRevenueTimeline();
@@ -43,44 +42,21 @@ function RevenueTooltip({ month, active, multiplier, hidden }: {
   );
 }
 
-function SummaryCard({ label, value, caption }: { label: string; value: string; caption: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center backdrop-blur-sm">
-      <div className="text-xs uppercase tracking-wide text-white/50">{label}</div>
-      <div className="mt-2 text-3xl font-semibold text-white">{value}</div>
-      <div className="mt-1 text-xs text-white/50">{caption}</div>
-    </div>
-  );
-}
-
 export default function RevenuePanel() {
-  const [annualized, setAnnualized] = useState(true);
   const [hidden, setHidden] = useState<string[]>([]);
-  const multiplier = annualized ? 12 : 1;
+  const multiplier = 12;
+  const peakRevenue = Math.max(...timeline.map(totalKnownFees));
   const toggleDeal = (id: string) => setHidden((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
 
   return (
-    <section className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-      <header className="text-center">
-        <h1 className="text-5xl font-semibold tracking-tight text-white sm:text-6xl">Revenue</h1>
-        <p className="mx-auto mt-3 max-w-xl text-balance text-lg text-white/60">SpaceX compute lease revenue over time.</p>
-      </header>
-
-      <div className="mx-auto w-full max-w-sm">
-        <SummaryCard label="Q3 2026 revenue" value={money(dealsRollup.q3_2026Revenue.value)} caption="Reported quarterly revenue" />
-      </div>
-
+    <section className="mx-auto flex w-full flex-col gap-4 text-left">
       <div className="min-w-0 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm sm:p-6">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-white">Revenue timeline</h2>
-            <p className="mt-1 text-xs text-white/50">{annualized ? "Annualized monthly run rate (USD)" : "Monthly revenue (USD)"}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div role="group" aria-label="Revenue period" className="inline-flex rounded-full border border-white/15 p-1 text-xs">
-              {[{ label: "Monthly", value: false }, { label: "Annualized", value: true }].map((option) => (
-                <button key={option.label} type="button" aria-pressed={annualized === option.value} onClick={() => setAnnualized(option.value)} className={`rounded-full px-3 py-1.5 ${annualized === option.value ? "bg-white text-black" : "text-white/60 hover:text-white"}`}>{option.label}</button>
-              ))}
+            <h2 className="text-sm font-medium text-white/50">Peak annualized lease revenue</h2>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-5xl font-semibold tracking-tight text-white">{money(peakRevenue * multiplier)}</span>
+              <span className="text-sm text-white/50">/ year</span>
             </div>
           </div>
         </div>
