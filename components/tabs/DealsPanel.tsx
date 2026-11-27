@@ -1,5 +1,6 @@
 import type { CitedFigure } from "@/lib/data/gpuSpecs";
 import { computeDeals, dealsRollup, dealsLastUpdated, type ComputeDeal } from "@/lib/data/dealsStatic";
+import RevenuePanel from "@/components/tabs/RevenuePanel";
 
 const usdCompact = (v: number) =>
   new Intl.NumberFormat("en-US", {
@@ -81,7 +82,7 @@ function DealCard({ deal }: { deal: ComputeDeal }) {
 
 export default function DealsPanel() {
   return (
-    <div className="mx-auto flex max-w-3xl flex-col items-center gap-8 text-center">
+    <div className="mx-auto flex max-w-6xl flex-col items-center gap-8 text-center">
       <h1 className="text-5xl font-semibold tracking-tight text-white sm:text-6xl">
         Compute Deals
       </h1>
@@ -90,13 +91,15 @@ export default function DealsPanel() {
         Memphis - here&apos;s who&apos;s renting it, and what it&apos;s worth.
       </p>
 
-      <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
+      <RevenuePanel />
+
+      <div className="grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
         <RollupStat label="Earlier lease commitments" figure={dealsRollup.combinedLeaseRevenue} format={usdCompact} caption="Before Anthropic's expanded agreements." />
         <RollupStat label="Colossus GPUs" figure={dealsRollup.colossusGpuCount} format={numberFmt} caption="Colossus 1 and 2 as of Sep 25, 2026." />
         <RollupStat label="Colossus power capacity" figure={dealsRollup.colossusCapacityGw} format={(v) => `${v} GW`} caption="Planned capacity across the Memphis campus." />
       </div>
 
-      <div className="flex w-full flex-col gap-4 text-left">
+      <div className="flex w-full max-w-3xl flex-col gap-4 text-left">
         <div className="text-sm uppercase tracking-wide text-white/50">Deals</div>
         <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
           {computeDeals.map((deal) => (
