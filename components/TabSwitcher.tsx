@@ -13,7 +13,7 @@ type Tab = "starlink" | "starmind" | "scale" | "deals";
 const TABS = [
   { key: "starmind", label: "Starmind" },
   { key: "starlink", label: "Starlink" },
-  { key: "deals", label: "Deals" },
+  { key: "deals", label: "Compute" },
   { key: "scale", label: "Scale" },
 ] as const;
 
