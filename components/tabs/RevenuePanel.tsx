@@ -49,7 +49,7 @@ export default function RevenuePanel() {
   const toggleDeal = (id: string) => setHidden((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
 
   return (
-    <section className="mx-auto flex w-full flex-col gap-4 text-left">
+    <section className="mx-auto flex min-w-0 w-full flex-col gap-4 text-left">
       <div className="min-w-0 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm sm:p-6">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -61,7 +61,7 @@ export default function RevenuePanel() {
           </div>
         </div>
 
-        <div className="h-[400px] w-full sm:h-[510px]" onKeyDown={(event) => event.stopPropagation()}>
+        <div className="h-[320px] w-full sm:h-[360px]" onKeyDown={(event) => event.stopPropagation()}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={timeline} margin={{ top: 12, right: 12, bottom: 8, left: 0 }}>
               <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.09)" />
