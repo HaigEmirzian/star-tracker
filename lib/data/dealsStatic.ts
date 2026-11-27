@@ -2,27 +2,27 @@ import type { CitedFigure } from "@/lib/data/gpuSpecs";
 
 const q3EarningsSource = {
   source: "https://www.sec.gov/Archives/edgar/data/1181412/000162828026066482/spaceexplorationtechnologi.htm",
-  sourceLabel: "SpaceX — Q3 2026 earnings release (SEC Exhibit 99.1)",
+  sourceLabel: "SpaceX - Q3 2026 earnings release (SEC Exhibit 99.1)",
 };
 
 // October 31 company forecasts, cross-checked against reporting reproducing
 // Musk's posts. These targets do not establish an updated installed total.
 const colossusBuildout: CitedFigure<string> = {
-  value: "Musk's Oct 31 targets: Gun Range — 220K GB300s for training, operational by end of November; Spam — about 200K GB300s for inference, in December. He also targets around 1.2M Blackwell GPUs at Colossus 2 by year-end. These are forecasts, not confirmed operational capacity.",
+  value: "Musk's Oct 31 targets: Gun Range - 220K GB300s for training, operational by end of November; Spam - about 200K GB300s for inference, in December. He also targets around 1.2M Blackwell GPUs at Colossus 2 by year-end. These are forecasts, not confirmed operational capacity.",
   source: "https://x.com/elonmusk/status/2116587474021691629",
-  sourceLabel: "Elon Musk — Oct 31 Gun Range and Spam buildout targets",
+  sourceLabel: "Elon Musk - Oct 31 Gun Range and Spam buildout targets",
 };
 
 const colossusYearEndTarget: CitedFigure<string> = {
   value: "Around 1.2M Blackwell GPUs at Colossus 2 by end of 2026 (company target)",
   source: "https://x.com/elonmusk/status/2116596535433871630",
-  sourceLabel: "Elon Musk — Oct 31 Colossus 2 year-end target",
+  sourceLabel: "Elon Musk - Oct 31 Colossus 2 year-end target",
 };
 
 // Manually maintained, cited data on SpaceX's third-party AI compute
 // contracts (Colossus data center leases, plus the Cursor acquisition).
 // Same discipline as starmindStatic.ts/fccStatic.ts: every dollar/capacity
-// figure below MUST carry a real source URL — never estimate, round beyond
+// figure below MUST carry a real source URL - never estimate, round beyond
 // what the source states, or infer a number the source doesn't give. These
 // deals move fast (new ones land every few weeks); update `dealsLastUpdated`
 // whenever a figure below changes.
@@ -34,6 +34,15 @@ export interface ComputeDeal {
   dealType: "compute lease" | "acquisition";
   facility: string;
   monthlyFee?: CitedFigure<number>; // USD
+  fullRateStartDate?: string;
+  rampStartDate?: string;
+  expansion?: {
+    monthlyFee: CitedFigure<number>;
+    maximumContractValue: CitedFigure<number>;
+    expectedFullRateStart: string;
+    // The amended agreements extend into 2029, but exact expiry months are undisclosed.
+    lastFullCalendarYear: number;
+  };
   totalContractValue: CitedFigure<number>; // USD
   gpuCount?: CitedFigure<number>;
   capacityMw?: CitedFigure<number>;
@@ -52,30 +61,45 @@ export const computeDeals: ComputeDeal[] = [
     monthlyFee: {
       value: 1_250_000_000,
       source: "https://www.axios.com/2026/05/20/anthropic-spacex-compute",
-      sourceLabel: "Axios — Anthropic paying SpaceX $15B/year",
+      sourceLabel: "Axios - Anthropic paying SpaceX $15B/year",
+    },
+    fullRateStartDate: "2026-07",
+    expansion: {
+      monthlyFee: {
+        value: 3_100_000_000,
+        source: "https://ipo.anthropic.com/documents/us/prospectus.pdf",
+        sourceLabel: "Anthropic November 2026 prospectus - SpaceXAI arrangements",
+      },
+      maximumContractValue: {
+        value: 120_500_000_000,
+        source: "https://ipo.anthropic.com/documents/us/prospectus.pdf",
+        sourceLabel: "Anthropic November 2026 prospectus - SpaceXAI arrangements",
+      },
+      expectedFullRateStart: "2026-12",
+      lastFullCalendarYear: 2028,
     },
     totalContractValue: {
       value: 45_000_000_000,
       source: "https://www.cnbc.com/2026/05/06/anthropic-spacex-data-center-capacity.html",
-      sourceLabel: "CNBC — Anthropic/SpaceX compute deal",
+      sourceLabel: "CNBC - Anthropic/SpaceX compute deal",
       note: "Full contract term through May 2029, at the stated monthly rate",
     },
     gpuCount: {
       value: 220_000,
       source: "https://www.cnbc.com/2026/05/06/anthropic-spacex-data-center-capacity.html",
-      sourceLabel: "CNBC — Anthropic/SpaceX compute deal",
-      note: "Lease covers all of Colossus 1's capacity — 220,000+ Nvidia GPUs",
+      sourceLabel: "CNBC - Anthropic/SpaceX compute deal",
+      note: "Lease covers all of Colossus 1's capacity - 220,000+ Nvidia GPUs",
     },
     capacityMw: {
       value: 300,
       source: "https://www.cnbc.com/2026/05/06/anthropic-spacex-data-center-capacity.html",
-      sourceLabel: "CNBC — Anthropic/SpaceX compute deal",
+      sourceLabel: "CNBC - Anthropic/SpaceX compute deal",
       note: "300MW+ of new capacity delivered within the announced month",
     },
     startDate: "2026-05",
     endDate: "2029-05",
     notes:
-      "Reduced fees during a capacity ramp-up in May/June 2026. Beyond the terrestrial lease, Anthropic and SpaceX are jointly exploring gigawatt-scale orbital AI compute.",
+      "Expanded agreements target $3.1B/month from December 2026, subject to capacity delivery; terms extend into 2029 with cancellation rights.",
   },
   {
     id: "google",
@@ -86,21 +110,22 @@ export const computeDeals: ComputeDeal[] = [
     monthlyFee: {
       value: 920_000_000,
       source: "https://www.cnbc.com/2026/06/05/google-to-pay-spacex-920-million-a-month-for-xai-compute-capacity.html",
-      sourceLabel: "CNBC — Google/SpaceX compute deal",
+      sourceLabel: "CNBC - Google/SpaceX compute deal",
     },
     totalContractValue: {
       value: 30_000_000_000,
       source: "https://techcrunch.com/2026/06/05/google-will-pay-spacex-920m-per-month-for-compute/",
-      sourceLabel: "TechCrunch — Google to pay SpaceX $920M/month",
+      sourceLabel: "TechCrunch - Google to pay SpaceX $920M/month",
       note: "Roughly $30B over the contract's lifetime (Oct 2026 through June 2029) at the stated monthly rate",
     },
     gpuCount: {
       value: 110_000,
       source: "https://www.cnbc.com/2026/06/05/google-to-pay-spacex-920-million-a-month-for-xai-compute-capacity.html",
-      sourceLabel: "CNBC — Google/SpaceX compute deal",
+      sourceLabel: "CNBC - Google/SpaceX compute deal",
       note: "110,000 Nvidia GPUs plus supporting CPUs/memory",
     },
     startDate: "2026-10",
+    rampStartDate: "2026-06",
     endDate: "2029-06",
     notes:
       "If SpaceX can't hit the 110,000-GPU target (plus a one-month grace period), Google can cancel or settle for fewer GPUs with a pro-rata fee reduction.",
@@ -114,12 +139,12 @@ export const computeDeals: ComputeDeal[] = [
     monthlyFee: {
       value: 150_000_000,
       source: "https://www.cnbc.com/2026/06/22/spacex-ai-colossus-data-center-reflection.html",
-      sourceLabel: "CNBC — SpaceX/Reflection AI compute deal",
+      sourceLabel: "CNBC - SpaceX/Reflection AI compute deal",
     },
     totalContractValue: {
       value: 6_300_000_000,
       source: "https://mlq.ai/news/spacex-signs-63b-compute-deal-with-reflection-ai-for-colossus-data-center/",
-      sourceLabel: "MLQ News — SpaceX $6.3B Reflection AI deal",
+      sourceLabel: "MLQ News - SpaceX $6.3B Reflection AI deal",
       note: "Total if the deal runs through 2029 at the stated monthly rate",
     },
     startDate: "2026-07",
@@ -141,7 +166,7 @@ export const computeDeals: ComputeDeal[] = [
     startDate: "2026-08-14",
     endDate: null,
     notes:
-      "SpaceX bought Cursor outright rather than leasing it capacity — Cursor now gets access to SpaceX's GPU fleet, including Colossus, to scale its own model training.",
+      "SpaceX bought Cursor outright rather than leasing it capacity - Cursor now gets access to SpaceX's GPU fleet, including Colossus, to scale its own model training.",
   },
 ];
 
@@ -150,8 +175,8 @@ export const dealsRollup = {
   combinedLeaseRevenue: {
     value: 80_000_000_000,
     source: "https://mlq.ai/news/spacex-signs-63b-compute-deal-with-reflection-ai-for-colossus-data-center/",
-    sourceLabel: "MLQ News — SpaceX $6.3B Reflection AI deal",
-    note: "Combined committed revenue from outside compute tenants (Anthropic, Google, Reflection, Cursor's prior lease) through 2029 — excludes the Cursor acquisition price itself",
+    sourceLabel: "MLQ News - SpaceX $6.3B Reflection AI deal",
+    note: "Combined committed revenue from outside compute tenants (Anthropic, Google, Reflection, Cursor's prior lease) through 2029 - excludes the Cursor acquisition price itself",
   } as CitedFigure<number>,
   q3_2026Revenue: {
     value: 14_575_000_000,
@@ -161,7 +186,7 @@ export const dealsRollup = {
   colossusGpuCount: {
     value: 780_000,
     source: "https://x.com/elonmusk/status/2103329761690865846",
-    sourceLabel: "Elon Musk — Colossus GPU inventory disclosure",
+    sourceLabel: "Elon Musk - Colossus GPU inventory disclosure",
     note: `Last combined inventory snapshot, per Musk on Sep 25, 2026: 230,000 GPUs at Colossus 1 (150K H100, 50K H200, 30K GB200) plus 550,000 at Colossus 2 (110K GB200, 440K GB300). This is a dated snapshot, not a live count. ${colossusBuildout.value}`,
   } as CitedFigure<number>,
   // Included in the existing source list; the text appears in the GPU note.
@@ -170,13 +195,13 @@ export const dealsRollup = {
   colossusCapacityGw: {
     value: 2,
     source: "https://www.teslarati.com/spacex-confirms-third-massive-compute-deal-colossus-memphis/",
-    sourceLabel: "Teslarati — SpaceX third Colossus compute deal",
+    sourceLabel: "Teslarati - SpaceX third Colossus compute deal",
     note: "Planned total power capacity across the Memphis campus (Colossus 1, 2, and a third building)",
   } as CitedFigure<number>,
   target2027PowerGw: {
     value: 20,
     source: "https://www.teslarati.com/spacex-confirms-third-massive-compute-deal-colossus-memphis/",
-    sourceLabel: "Teslarati — SpaceX third Colossus compute deal",
+    sourceLabel: "Teslarati - SpaceX third Colossus compute deal",
     note: "Elon Musk's stated target for power/cooling capacity online by end of 2027, per SpaceX's Q2 2026 earnings call",
   } as CitedFigure<number>,
 };
